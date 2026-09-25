@@ -8,8 +8,9 @@
     ["#", "Wall"], [".", "Eraser"], ["1", "Hero"], ["2", "Fairy"], ["G", "Goal"],
     ["a", "Red button"], ["A", "Red door"], ["b", "Blue button"], ["B", "Blue door"],
     ["x", "Purple plate"], ["X", "Purple gate"],
-    ["k", "Key"], ["L", "Lock"], ["w", "Wings"], ["*", "Star"], ["h", "Heart trap"],
-    ["m", "Monster"], ["s", "Spider"], ["F", "Angry fairy"],
+    ["k", "Key"], ["L", "Lock"], ["w", "Wings"], ["*", "Star"], ["+", "Candy"], ["~", "Ice"],
+    ["3", "Portal 3"], ["4", "Portal 4"], ["5", "Portal 5"], ["h", "Heart trap"],
+    ["m", "Monster"], ["s", "Spider"], ["g", "Ghost"], ["F", "Angry fairy"],
   ];
   const UNIQUE = new Set(["1", "2", "G"]);
 
@@ -121,6 +122,11 @@
     if (x <= 0 || y <= 0 || x >= w - 1 || y >= h - 1) return; // the edge is always wall
     if (E.grid[y][x] === E.tool) return;
     if (UNIQUE.has(E.tool)) for (const row of E.grid) for (let i = 0; i < row.length; i++) if (row[i] === E.tool) row[i] = ".";
+    if (E.tool >= "3" && E.tool <= "9") { // portals come in pairs: a third one replaces the oldest
+      const same = [];
+      E.grid.forEach((row, yy) => row.forEach((c, xx) => c === E.tool && same.push([xx, yy])));
+      if (same.length >= 2) E.grid[same[0][1]][same[0][0]] = ".";
+    }
     E.grid[y][x] = E.tool;
     E.dirty = true;
     save();
@@ -275,6 +281,10 @@
     else if (ch === "m") P.monster(x, m, m, s, 0, 1);
     else if (ch === "s") P.spider(x, m, m, s, 0, 1);
     else if (ch === "F") P.angryFairy(x, m, m + 2, s * 0.9, 0, false);
+    else if (ch === "+") P.candy(x, m, m, s * 1.4, r, 0);
+    else if (ch === "~") P.ice(x, 0, 0, s, 9);
+    else if (ch >= "3" && ch <= "9") P.portal(x, m, m, s, 0.3, +ch);
+    else if (ch === "g") P.ghost(x, m, m, s, 0, 1, false);
     return c;
   }
 

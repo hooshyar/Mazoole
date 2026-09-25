@@ -16,6 +16,8 @@
     <span class="stat hearts" id="hud-hearts"></span>
     <span class="stat"><span id="hud-key-icon"></span><b id="hud-keys">0</b></span>
     <span class="stat"><span id="hud-star-icon"></span><b id="hud-stars">0/0</b></span>
+    <span class="stat score" title="Score"><b id="hud-score">0</b></span>
+    <span class="stat clock" title="Time">⏱ <b id="hud-clock">0:00</b></span>
     <span class="grow"></span>
     <button id="btn-restart" class="small" title="Start again (R)">↺</button>
     <button id="btn-sound" class="small">♪ on</button>
@@ -38,6 +40,7 @@
     <div class="sheet">
       <h1>Mazoole</h1>
       <p class="sub">mazes drawn by hand, played together</p>
+      <p class="medal-line">Medals: <b id="medal-total">0</b> <button id="btn-stickers" class="small">📒 Sticker book</button></p>
       <div class="pick">
         <button id="pick-1" data-players="1"><span>1 player</span></button>
         <button id="pick-2" data-players="2"><span>2 players</span></button>
@@ -54,6 +57,7 @@
     <div class="sheet small">
       <h2 id="intro-title"></h2>
       <p id="intro-story"></p>
+      <ul id="intro-goals" class="goals"></ul>
       <p id="intro-controls" class="hint"></p>
       <button id="btn-go" class="big">Go! ▶</button>
     </div>
@@ -62,7 +66,9 @@
   <section id="won" class="screen" hidden>
     <div class="sheet small">
       <h2 id="won-title">Hooray!</h2>
-      <p id="won-stars"></p>
+      <div id="won-medals"></div>
+      <div id="won-sheet"></div>
+      <p id="won-best"></p>
       <button id="btn-next" class="big">Next maze →</button>
       <button id="btn-again">Play again</button>
       <button class="btn-menu">Menu</button>
@@ -118,10 +124,21 @@
     </div>
   </section>
 
+  <section id="stickers" class="screen" hidden>
+    <div class="sheet">
+      <h2>Sticker book</h2>
+      <p class="hint" id="sticker-count"></p>
+      <div id="sticker-grid"></div>
+      <button class="btn-menu big">Done</button>
+    </div>
+  </section>
+
   <div id="toast" role="status" hidden></div>
+  <div id="sticker-pop" role="status" hidden></div>
 
   <script src="js/draw.js"></script>
   <script src="js/levels.js"></script>
+  <script src="js/progress.js"></script>
   <script src="js/game.js"></script>
   <script src="js/photo.js"></script>
   <script src="js/voices.js"></script>

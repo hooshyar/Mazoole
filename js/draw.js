@@ -449,9 +449,83 @@
     } else heart(ctx, cx + s * 0.2, cy - s * 0.4, s * 0.35, r, "#ff5c7a");
   }
 
+
+  // ---------------------------------------------------------------- new things
+  function ice(ctx, x, y, s, seed) {
+    const r = rng(seed);
+    ctx.save();
+    ctx.fillStyle = "rgba(150, 205, 245, 0.45)";
+    ctx.fillRect(x * s, y * s, s, s);
+    ctx.globalAlpha = 0.8;
+    // little shine marks, like crayon glints on ice
+    if (r() < 0.55) stroke(ctx, [[x * s + s * (0.2 + r() * 0.3), y * s + s * 0.35], [x * s + s * (0.45 + r() * 0.3), y * s + s * 0.2]], r, 1, 1.5, "#ffffff");
+    if (r() < 0.35) stroke(ctx, [[x * s + s * 0.55, y * s + s * 0.8], [x * s + s * 0.75, y * s + s * 0.65]], r, 1, 1.2, "#ffffff");
+    ctx.restore();
+  }
+
+  const PORTAL_COLORS = ["#e5484d", "#3e7bfa", "#2fae62", "#ff9f1c", "#9b5de5", "#ff5cad", "#16b5b0"];
+  function portal(ctx, cx, cy, s, t, num) {
+    const color = PORTAL_COLORS[(num - 3) % PORTAL_COLORS.length];
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(t * 2.5);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = Math.max(1.5, s * 0.06);
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    for (let a = 0; a < Math.PI * 5; a += 0.2) {
+      const rr = (a / (Math.PI * 5)) * s * 0.4;
+      const px = Math.cos(a) * rr, py = Math.sin(a) * rr;
+      a ? ctx.lineTo(px, py) : ctx.moveTo(px, py);
+    }
+    ctx.stroke();
+    ctx.restore();
+    ctx.save();
+    ctx.font = `bold ${s * 0.32}px 'Patrick Hand', cursive`;
+    ctx.fillStyle = color;
+    ctx.textAlign = "center";
+    ctx.fillText(num, cx + s * 0.33, cy - s * 0.22);
+    ctx.restore();
+  }
+
+  function candy(ctx, cx, cy, s, r, hue) {
+    const k = s * 0.13;
+    const color = ["#ff5c7a", "#ffc93c", "#3e7bfa", "#2fae62", "#9b5de5"][hue % 5];
+    stroke(ctx, [[cx - k * 2.1, cy - k * 0.8], [cx - k, cy], [cx - k * 2.1, cy + k * 0.8]], r, 0.5, 1.2);
+    stroke(ctx, [[cx + k * 2.1, cy - k * 0.8], [cx + k, cy], [cx + k * 2.1, cy + k * 0.8]], r, 0.5, 1.2);
+    ellipse(ctx, cx, cy, k * 1.2, k, r, 1.5, INK, color);
+  }
+
+  // The scribble ghost: a wobbly sheet that chases you
+  function ghost(ctx, cx, cy, s, t, id, scared) {
+    const r = rng(hash(Math.floor(t * 6), id, 8));
+    const k = s * 0.38;
+    const y = cy + Math.sin(t * 5 + id) * s * 0.05;
+    const pts = [];
+    for (let i = 0; i <= 8; i++) { const a = Math.PI + (i / 8) * Math.PI; pts.push([cx + Math.cos(a) * k, y - k * 0.1 + Math.sin(a) * k]); }
+    for (let i = 0; i <= 6; i++) pts.push([cx + k - (i * 2 * k) / 6, y + k * 0.75 + (i % 2 ? -k * 0.25 : 0) + Math.sin(t * 10 + i) * k * 0.06]);
+    pts.push(pts[0]);
+    ctx.beginPath(); pts.forEach((p, i) => (i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])));
+    crayon(ctx, cx - k, y - k * 1.2, k * 2, k * 2.2, scared ? "#b9d7ff" : "#f2eefc", r, 0.95);
+    stroke(ctx, pts, r, 1, 2);
+    ellipse(ctx, cx - k * 0.35, y - k * 0.2, k * 0.14, k * 0.2, r, 1.5, INK, INK);
+    ellipse(ctx, cx + k * 0.35, y - k * 0.2, k * 0.14, k * 0.2, r, 1.5, INK, INK);
+    if (scared) stroke(ctx, [[cx - k * 0.35, y + k * 0.3], [cx - k * 0.1, y + k * 0.2], [cx + k * 0.1, y + k * 0.3], [cx + k * 0.35, y + k * 0.2]], r, 0.5, 1.5);
+    else ellipse(ctx, cx, y + k * 0.25, k * 0.14, k * 0.12, r, 1.5, INK, INK);
+  }
+
+  // A crayon medal (for the three challenges)
+  function medal(ctx, cx, cy, k, got, r) {
+    r = r || rng(7);
+    stroke(ctx, [[cx - k * 0.4, cy - k * 1.1], [cx - k * 0.15, cy - k * 0.5]], r, 0.5, k * 0.18, got ? "#3e7bfa" : "#cfcac0");
+    stroke(ctx, [[cx + k * 0.4, cy - k * 1.1], [cx + k * 0.15, cy - k * 0.5]], r, 0.5, k * 0.18, got ? "#e5484d" : "#cfcac0");
+    ellipse(ctx, cx, cy, k * 0.6, k * 0.6, r, 2, INK, got ? "#ffc93c" : "#ece8df");
+    if (got) star(ctx, cx, cy, k * 0.35, r, "#fff3a0");
+  }
+
   window.Pencil = {
     INK, PAPER, DOOR_COLORS, rng, hash, stroke, ellipse, paper, walls, door, lockDoor, button, plate,
     key, wingsShape, star, heart, heartTrap, gift, hero, fairy, monster, spider, angryFairy,
-    beam, friendInBed,
+    beam, friendInBed, ice, portal, candy, ghost, medal, PORTAL_COLORS,
   };
 })();
