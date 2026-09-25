@@ -8,7 +8,10 @@
   const HEARTS = 5;           // shared hearts per level
   const INVULN = 1.5;         // seconds of blinking after getting hurt
   const BEAM = { charge: 1.2, fire: 1.1, cycle: 4.2 };
-  const MONSTER_SPEED = { m: 2.2, s: 1.6 };
+  const MONSTER_SPEED = { m: 2.2, s: 1.6, g: 1.8 };
+  const GHOST_SIGHT = 9;      // the ghost only chases you when you are this close (in steps)
+  const SLIDE_SPEED = 8.5;    // ice is fast!
+  const POINTS = { candy: 10, star: 100, key: 25, button: 25, wings: 15, unlock: 25 };
 
   const DIRS = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
   const KEYMAP = [
@@ -24,6 +27,7 @@
     const world = {
       def, w, h, grid, starts: [], monsters: [], turrets: [], starsTotal: 0,
       pressed: new Set(), held: false, keys: 0, stars: 0, hearts: HEARTS, dirty: true,
+      portals: {}, candyTotal: 0, candy: 0, score: 0, time: 0, hurts: 0, caught: 0, combo: 0, lastCandy: -9,
     };
     if (def.photo) { // a photo of the drawing, shown faintly under the maze
       let img = photoCache.get(def.photo);
@@ -34,10 +38,12 @@
     for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
       const c = grid[y][x];
       if (c === "1" || c === "2") { world.starts[+c - 1] = [x, y]; grid[y][x] = "."; }
-      else if (c === "m" || c === "s") {
+      else if (c === "m" || c === "s" || c === "g") {
         world.monsters.push({ kind: c, x, y, sx: x, sy: y, dx: 0, dy: 0, prog: 0, id: world.monsters.length });
         grid[y][x] = ".";
       } else if (c === "*") world.starsTotal++;
+      else if (c === "+") world.candyTotal++;
+      else if (c >= "3" && c <= "9") (world.portals[c] = world.portals[c] || []).push([x, y]);
       else if (c === "F") world.turrets.push({ x, y, dx: 0, dy: 0, offset: world.turrets.length * 1.4, cells: [], state: "idle" });
     }
     if (!world.starts[0]) world.starts[0] = findFloor(world);
@@ -46,6 +52,7 @@
     // monsters walk left-right, spiders go up-down on their thread
     // (each falls back to the other direction if there's no room)
     for (const m of world.monsters) {
+      if (m.kind === "g") { m.wait = 3; continue; } // ghosts chase instead of patrolling (after a head start)
       const run = (dx, dy) => { let n = 0; while (monsterFree(world, m.x + dx * (n + 1), m.y + dy * (n + 1))) n++; return n; };
       const hor = run(1, 0) + run(-1, 0), ver = run(0, 1) + run(0, -1);
       const vertical = m.kind === "s" ? ver > 0 : hor === 0 && ver > 0;
@@ -61,7 +68,24 @@
         if (n > best) { best = n; f.dx = dx; f.dy = dy; }
       }
     }
+    world.par = def.par || estimatePar(world);
     return world;
+  }
+
+  // Seconds to beat for the clock medal: a relaxed walk to the goal and back-tracking time
+  function estimatePar(world) {
+    const s = world.starts[0], seen = new Map([[s + "", 0]]), q = [s];
+    let d = 0;
+    for (let i = 0; i < q.length; i++) {
+      const [x, y] = q[i];
+      if (world.grid[y][x] === "G") { d = seen.get(q[i] + ""); break; }
+      for (const [dx, dy] of Object.values(DIRS)) {
+        const n = [x + dx, y + dy], c = inside(world, n[0], n[1]) && world.grid[n[1]][n[0]];
+        if (!c || c === "#" || c === "F" || seen.has(n + "")) continue;
+        seen.set(n + "", seen.get(q[i] + "") + 1); q.push(n);
+      }
+    }
+    return Math.max(20, Math.round((d / SPEED) * 3 + 15));
   }
 
   function findFloor(world) {
@@ -94,13 +118,13 @@
   // ------------------------------------------------------------ game state
   const G = {
     mode: "menu", players: 2, levelIndex: 0, customDef: null, world: null,
-    t: 0, particles: [], sound: true, touchDir: [null, null],
+    t: 0, particles: [], popups: [], shake: 0, sound: true, touchDir: [null, null],
   };
   let canvas, ctx, staticCanvas, staticCtx, tile = 32, dpr = 1;
 
   function makePlayer(i, start) {
     return { id: i, x: start[0], y: start[1], fx: start[0], fy: start[1], sx: start[0], sy: start[1], tx: 0, ty: 0,
-      moving: false, facing: 1, flyT: 0, inv: 0, hurtT: 0 };
+      moving: false, facing: 1, flyT: 0, inv: 0, hurtT: 0, dir: [1, 0], slide: null };
   }
 
   function startLevel(def) {
@@ -108,6 +132,7 @@
     G.world.playersList = [];
     for (let i = 0; i < G.players; i++) G.world.playersList.push(makePlayer(i, G.world.starts[i]));
     G.particles = [];
+    G.popups = [];
     G.mode = "intro";
     document.body.classList.remove("in-menu", "editing");
     resize();
@@ -173,12 +198,30 @@
     win: () => [523, 659, 784, 1046].forEach((f, i) => setTimeout(() => beep(f, 0.25), i * 140)),
     lose: () => [392, 330, 262].forEach((f, i) => setTimeout(() => beep(f, 0.3), i * 180)),
     unpress: () => beep(500, 0.15, "square", 250),
+    candy: (n) => beep(700 + (n || 1) * 120, 0.07, "square"),
+    portal: () => beep(200, 0.35, "sine", 1200),
+    slide: () => beep(900, 0.15, "sine", 600),
+    medal: () => beep(1175, 0.18, "triangle", 1568),
+    sticker: () => [784, 988, 1175, 1568].forEach((f, i) => setTimeout(() => beep(f, 0.18), i * 90)),
   };
   // Your own recorded voices win over the beeps (see js/voices.js)
-  function sfx(name) {
+  function sfx(name, arg) {
     if (!G.sound) return;
     if (window.MazooleVoices && window.MazooleVoices.play(name)) return;
-    (BEEPS[name] || (() => {}))();
+    (BEEPS[name] || (() => {}))(arg);
+  }
+
+  // ------------------------------------------------------------ points & awards
+  function popup(x, y, text, color) {
+    G.popups.push({ x: x + 0.5, y: y + 0.1, text, color: color || "#2e2e33", life: 1.1 });
+  }
+  function addPoints(W, n, x, y, label) {
+    W.score += n;
+    popup(x, y, label || "+" + n);
+  }
+  function count(stat, n) {
+    const P2 = window.MazooleProgress;
+    if (P2) UI.stickers(P2.bump(stat, n));
   }
 
   // ------------------------------------------------------------ update
@@ -187,7 +230,11 @@
     G.t += dt;
     for (const p of G.particles) { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 3 * dt; p.life -= dt; }
     G.particles = G.particles.filter((p) => p.life > 0);
+    for (const p of G.popups) { p.y -= dt * 0.9; p.life -= dt; }
+    G.popups = G.popups.filter((p) => p.life > 0);
+    if (G.shake > 0) G.shake -= dt;
     if (G.mode !== "play") return;
+    W.time += dt;
 
     for (const p of W.playersList) updatePlayer(W, p, dt);
     // purple plates only work while someone (not flying) stands on one
@@ -201,7 +248,14 @@
       if (p.inv > 0) continue;
       const grounded = p.flyT <= 0;
       if (grounded) for (const m of W.monsters) {
-        if (Math.hypot(m.fx - p.fx, m.fy - p.fy) < 0.62) { hurt(W, p, m.kind); break; }
+        if (m.wait > 0) continue; // a sleeping ghost can't catch anyone
+        if (Math.hypot(m.fx - p.fx, m.fy - p.fy) < 0.62) {
+          if (m.kind === "g") { // the ghost poofs home after catching someone
+            W.caught++; burst(m.x, m.y, "#b9a7e8"); m.x = m.fx = m.sx; m.y = m.fy = m.sy; m.moving = false; m.wait = 3;
+          }
+          hurt(W, p, m.kind);
+          break;
+        }
       }
       if (p.inv > 0) continue;
       const px = Math.round(p.fx), py = Math.round(p.fy);
@@ -224,22 +278,31 @@
         }
       }
     }
-    if (!p.moving) {
+    if (!p.moving && p.slide) {
+      // on ice you keep going until something stops you
+      const [dx, dy] = p.slide, nx = p.x + dx, ny = p.y + dy;
+      if (W.grid[p.y][p.x] === "~" && p.flyT <= 0 && W.grid[ny][nx] !== "L" && playerCanEnter(W, p, nx, ny)) {
+        p.tx = nx; p.ty = ny; p.moving = true;
+      } else p.slide = null;
+    }
+    if (!p.moving && !p.slide) {
       const d = dirFor(p.id);
       if (d) {
         const [dx, dy] = DIRS[d];
         if (dx) p.facing = dx;
+        p.dir = [dx, dy];
         const nx = p.x + dx, ny = p.y + dy;
         if (playerCanEnter(W, p, nx, ny)) {
           if (W.grid[ny][nx] === "L" && p.flyT <= 0) {
-            W.keys--; W.grid[ny][nx] = "."; W.dirty = true; sfx("unlock"); burst(nx, ny, "#f5d33b"); UI.updateHud();
+            W.keys--; W.grid[ny][nx] = "."; W.dirty = true; sfx("unlock"); burst(nx, ny, "#f5d33b");
+            addPoints(W, POINTS.unlock, nx, ny); UI.updateHud();
           }
           p.tx = nx; p.ty = ny; p.moving = true;
         }
       }
     }
     if (p.moving) {
-      const step = SPEED * dt;
+      const step = (p.slide ? SLIDE_SPEED : SPEED) * dt;
       const ddx = p.tx - p.fx, ddy = p.ty - p.fy;
       const dist = Math.hypot(ddx, ddy);
       if (dist <= step) {
@@ -280,16 +343,85 @@
 
   function enterTile(W, p) {
     const c = W.grid[p.y][p.x];
-    if (c === "k") { W.keys++; W.grid[p.y][p.x] = "."; sfx("key"); burst(p.x, p.y, "#f5d33b"); }
-    else if (c === "*") { W.stars++; W.grid[p.y][p.x] = "."; sfx("star"); burst(p.x, p.y, "#ffc93c"); }
-    else if (c === "w") { if (p.flyT <= 0) sfx("wings"); p.flyT = WINGS_TIME; p.wx = p.x; p.wy = p.y; burst(p.x, p.y, "#c9a6ff"); }
-    else if (isButton(c) && !W.pressed.has(c)) { W.pressed.add(c); W.dirty = true; sfx("button"); burst(p.x, p.y, P.DOOR_COLORS[c]); }
+    const grounded = p.flyT <= 0;
+    if (c === "~" && grounded) {
+      if (!p.slide) sfx("slide");
+      p.slide = p.dir;
+      count("slides");
+    } else p.slide = null;
+    if (c === "k") { W.keys++; W.grid[p.y][p.x] = "."; sfx("key"); burst(p.x, p.y, "#f5d33b"); addPoints(W, POINTS.key, p.x, p.y); }
+    else if (c === "*") { W.stars++; W.grid[p.y][p.x] = "."; sfx("star"); burst(p.x, p.y, "#ffc93c"); addPoints(W, POINTS.star, p.x, p.y); }
+    else if (c === "+") {
+      W.grid[p.y][p.x] = "."; W.candy++;
+      W.combo = G.t - W.lastCandy < 0.75 ? Math.min(5, W.combo + 1) : 1;
+      W.lastCandy = G.t;
+      sfx("candy", W.combo);
+      addPoints(W, POINTS.candy * W.combo, p.x, p.y, W.combo > 1 ? `+${POINTS.candy * W.combo} x${W.combo}` : null);
+      count("candy");
+      if (window.MazooleProgress) UI.stickers(window.MazooleProgress.best("bestCombo", W.combo));
+    }
+    else if (c >= "3" && c <= "9" && grounded) {
+      const other = (W.portals[c] || []).find((q) => q[0] !== p.x || q[1] !== p.y);
+      if (other) {
+        burst(p.x, p.y, P.PORTAL_COLORS[(+c - 3) % 7]);
+        p.x = p.fx = other[0]; p.y = p.fy = other[1];
+        p.slide = null;
+        sfx("portal");
+        burst(p.x, p.y, P.PORTAL_COLORS[(+c - 3) % 7]);
+        count("ports");
+      }
+    }
+    else if (c === "w") {
+      if (p.flyT <= 0) { sfx("wings"); addPoints(W, POINTS.wings, p.x, p.y); count("flights"); }
+      p.flyT = WINGS_TIME; p.wx = p.x; p.wy = p.y; burst(p.x, p.y, "#c9a6ff");
+    }
+    else if (isButton(c) && !W.pressed.has(c)) { W.pressed.add(c); W.dirty = true; sfx("button"); burst(p.x, p.y, P.DOOR_COLORS[c]); addPoints(W, POINTS.button, p.x, p.y); }
     else if (c === "h" && p.flyT <= 0) hurt(W, p, "trap");
     else if (c === "G") return win(W);
     UI.updateHud();
   }
 
+  // The ghost walks toward the nearest player on the ground (flying players are safe)
+  function updateGhost(W, m, dt) {
+    if (m.fx == null) { m.fx = m.x; m.fy = m.y; }
+    if (m.wait > 0) { m.wait -= dt; return; }
+    if (!m.moving) {
+      const targets = new Set(W.playersList.filter((p) => p.flyT <= 0 && p.inv <= 0).map((p) => Math.round(p.fx) + "," + Math.round(p.fy)));
+      let step = null;
+      if (targets.size) {
+        const prev = new Map([[m.x + "," + m.y, null]]), q = [[m.x, m.y]];
+        let found = null;
+        const depth = new Map([[m.x + "," + m.y, 0]]);
+        for (let i = 0; i < q.length && !found; i++) {
+          const [x, y] = q[i];
+          if (depth.get(x + "," + y) >= GHOST_SIGHT) continue; // too far away: lose interest
+          for (const [dx, dy] of Object.values(DIRS)) {
+            const k = x + dx + "," + (y + dy);
+            if (prev.has(k) || !monsterFree(W, x + dx, y + dy)) continue;
+            prev.set(k, x + "," + y); depth.set(k, depth.get(x + "," + y) + 1); q.push([x + dx, y + dy]);
+            if (targets.has(k)) { found = k; break; }
+          }
+        }
+        if (found) {
+          let k = found;
+          while (prev.get(k) !== m.x + "," + m.y) k = prev.get(k);
+          step = k.split(",").map(Number);
+        }
+      }
+      if (!step) { // nobody to chase: wander
+        const opts = Object.values(DIRS).map(([dx, dy]) => [m.x + dx, m.y + dy]).filter(([x, y]) => monsterFree(W, x, y));
+        if (opts.length) step = opts[Math.floor(Math.random() * opts.length)];
+      }
+      if (!step) return;
+      m.tx = step[0]; m.ty = step[1]; m.moving = true;
+    }
+    const sp = MONSTER_SPEED.g * dt, ddx = m.tx - m.fx, ddy = m.ty - m.fy, dist = Math.hypot(ddx, ddy);
+    if (dist <= sp) { m.fx = m.x = m.tx; m.fy = m.y = m.ty; m.moving = false; }
+    else { m.fx += (ddx / dist) * sp; m.fy += (ddy / dist) * sp; }
+  }
+
   function updateMonster(W, m, dt) {
+    if (m.kind === "g") return updateGhost(W, m, dt);
     if (!m.dx && !m.dy) { m.fx = m.x; m.fy = m.y; return; }
     if (!monsterFree(W, m.x + m.dx, m.y + m.dy) && m.prog === 0) { m.dx *= -1; m.dy *= -1; }
     if (monsterFree(W, m.x + m.dx, m.y + m.dy)) {
@@ -320,12 +452,16 @@
     if (p.inv > 0 || G.mode !== "play") return;
     G.lastHurt = { why, x: p.x, y: p.y };
     W.hearts--;
+    W.hurts++;
+    W.combo = 0;
+    G.shake = 0.35;
     sfx("hurt");
     burst(p.x, p.y, "#b5405a");
     p.hurtT = 0.6;
     p.inv = INVULN;
     p.flyT = 0;
     p.moving = false;
+    p.slide = null;
     p.x = p.fx = p.sx; p.y = p.fy = p.sy;
     UI.updateHud();
     if (W.hearts <= 0) { G.mode = "lost"; sfx("lose"); UI.showLost(); }
@@ -337,8 +473,24 @@
     sfx("win");
     const gy = W.grid.findIndex((r) => r.includes("G")), gx = W.grid[gy].indexOf("G");
     for (let i = 0; i < 40; i++) burst(gx, gy, ["#e5484d", "#f5d33b", "#3e7bfa", "#2fae62", "#ff8fc1"][i % 5], 1);
+    // the score sheet
+    const allStars = W.stars === W.starsTotal;
+    const fast = W.time <= W.par;
+    const r = {
+      points: W.score,
+      timeBonus: Math.max(0, Math.round((W.par - W.time) * 10)),
+      heartBonus: W.hearts * 50,
+      noOuch: W.hurts === 0 ? 300 : 0,
+      medalsNow: 1 | (allStars ? 2 : 0) | (fast ? 4 : 0),
+      time: W.time, par: W.par, hurts: W.hurts, caught: W.caught, stars: W.stars, starsTotal: W.starsTotal,
+      coop: !!W.def.coop, hasGhost: W.monsters.some((m) => m.kind === "g"),
+    };
+    r.score = r.points + r.timeBonus + r.heartBonus + r.noOuch;
+    const PR = window.MazooleProgress;
+    if (W.def.fromEditor) count("ownPlays");
+    const prog = PR ? PR.finish(W.def, r) : { isBest: false, newMedals: 0, stickers: [], best: r.score };
     UI.updateHud();
-    setTimeout(() => UI.showWon(W), 900);
+    setTimeout(() => UI.showWon(W, r, prog), 900);
   }
 
   function burst(x, y, color, n) {
@@ -379,6 +531,7 @@
       else if (isButton(c)) P.button(sctx, x, y, s, c, W.pressed.has(c), seed);
       else if (c === "X") P.door(sctx, x, y, s, "x", W.held, seed);
       else if (c === "x") P.plate(sctx, x, y, s, W.held, seed);
+      else if (c === "~") P.ice(sctx, x, y, s, seed);
     }
     W.dirty = false;
   }
@@ -394,6 +547,8 @@
       else if (ch === "*") P.star(c, cx, cy + bob, s * 0.3, r);
       else if (ch === "w") { c.save(); c.globalAlpha = 0.9; P.wingsShape(c, cx, cy + bob, s * 1.1, r, "rgba(200,170,255,0.8)", Math.sin(t * 4)); c.restore(); }
       else if (ch === "h") P.heartTrap(c, x, y, s, t, P.hash(x, y, 9));
+      else if (ch === "+") P.candy(c, cx, cy + bob * 0.5, s, r, x + y);
+      else if (ch >= "3" && ch <= "9") P.portal(c, cx, cy, s, t, +ch);
       else if (ch === "G") {
         if (W.def.goal === "friend") P.friendInBed(c, cx, cy, s, t, W.won);
         else P.gift(c, cx, cy, s, P.rng(P.hash(x, y, 4)), W.won);
@@ -412,7 +567,13 @@
     for (const m of W.monsters) {
       const fx = m.fx == null ? m.x : m.fx, fy = m.fy == null ? m.y : m.fy;
       if (m.top != null) P.stroke(c, [[m.x * s + s / 2, m.top * s], [fx * s + s / 2, fy * s + s / 2]], P.rng(m.id + 1), 0, 1, P.INK, 0.5);
-      (m.kind === "s" ? P.spider : P.monster)(c, fx * s + s / 2, fy * s + s / 2, s, t, m.id);
+      if (m.kind === "g") {
+        c.save();
+        if (m.wait > 0) c.globalAlpha = 0.35 + 0.15 * Math.sin(t * 8); // asleep: see-through and harmless
+        P.ghost(c, fx * s + s / 2, fy * s + s / 2, s, t, m.id, players0(W).some((p) => p.flyT > 0));
+        c.restore();
+      }
+      else (m.kind === "s" ? P.spider : P.monster)(c, fx * s + s / 2, fy * s + s / 2, s, t, m.id);
     }
     const players = W.playersList || [];
     for (const p of players) {
@@ -435,7 +596,17 @@
       P.star(c, p.x * s, p.y * s, s * 0.1, r, p.color);
       c.restore();
     }
+    for (const p of G.popups) {
+      c.save();
+      c.globalAlpha = Math.min(1, p.life * 1.5);
+      c.font = `bold ${Math.round(s * 0.42)}px 'Patrick Hand', cursive`;
+      c.textAlign = "center";
+      c.lineWidth = 4; c.strokeStyle = P.PAPER; c.strokeText(p.text, p.x * s, p.y * s);
+      c.fillStyle = p.color; c.fillText(p.text, p.x * s, p.y * s);
+      c.restore();
+    }
   }
+  const players0 = (W) => W.playersList || [];
 
   function frame(now) {
     const dt = Math.min(0.05, (now - (frame.last || now)) / 1000);
@@ -444,8 +615,10 @@
     else if (G.world) {
       update(dt);
       if (G.world.dirty) drawStatic(G.world, tile);
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const sh = G.shake > 0 ? G.shake * 14 : 0;
+      ctx.setTransform(dpr, 0, 0, dpr, (Math.random() - 0.5) * sh * dpr, (Math.random() - 0.5) * sh * dpr);
       renderWorld(G.world, ctx, tile, G.t);
+      UI.clock();
     }
     requestAnimationFrame(frame);
   }
@@ -480,10 +653,22 @@
     buildMenu() {
       const list = $("level-list");
       list.innerHTML = "";
+      const PR = window.MazooleProgress;
+      const total = PR ? PR.medalCount() : 0;
+      $("medal-total").textContent = `${total} / ${window.MAZOOLE_LEVELS.length * 3}`;
       window.MAZOOLE_LEVELS.forEach((lv, i) => {
         const b = document.createElement("button");
-        b.className = "card";
-        b.innerHTML = `<b>${i + 1}. ${lv.name}</b><span>${lv.story}</span>` + (lv.coop ? `<i class="badge">2 players</i>` : "");
+        const info = PR ? PR.levelInfo(lv) : { medals: 0, best: 0 };
+        const locked = PR && !PR.unlocked(lv);
+        b.className = "card" + (lv.bonus ? " bonus" : "") + (locked ? " locked" : "");
+        b.innerHTML = `<b>${lv.bonus ? "★ " : i + 1 + ". "}${lv.name}</b>` +
+          (lv.coop ? `<i class="badge">2 players</i>` : "") + (lv.bonus ? `<i class="badge gold">secret level</i>` : "") +
+          (locked ? `<span>🔒 Collect ${lv.bonus} medals to open this level. You have ${total}.</span>`
+                  : `<span>${lv.story}</span>`) +
+          `<div class="card-foot"><span class="medals"></span><span class="best">${info.best ? "Best " + info.best.toLocaleString() : ""}</span></div>`;
+        const row = b.querySelector(".medals");
+        for (let m = 0; m < 3; m++) row.appendChild(icon((c, k) => P.medal(c, k / 2, k * 0.62, k * 0.4, (info.medals >> m) & 1), 26));
+        if (locked) { b.onclick = () => UI.toast(`Keep playing! ${lv.bonus - total} more medals to open the secret level.`); list.appendChild(b); return; }
         b.onclick = () => {
           if (lv.coop && G.players === 1) { G.players = 2; UI.toast("This maze needs two players, so the fairy is joining in!"); }
           G.levelIndex = i; G.customDef = null; startLevel(lv);
@@ -515,6 +700,20 @@
     showIntro(def) {
       $("intro-title").textContent = def.name;
       $("intro-story").textContent = def.story || "";
+      const W = G.world, PR = window.MazooleProgress, have = PR ? PR.levelInfo(def).medals : 0;
+      const goals = [
+        def.goal === "friend" ? "Rescue your friend" : "Reach the gift",
+        W.starsTotal ? `Collect all ${W.starsTotal} star${W.starsTotal > 1 ? "s" : ""}` : "Collect all the stars (there are none, easy!)",
+        `Finish in under ${W.par} seconds`,
+      ];
+      const ul = $("intro-goals");
+      ul.innerHTML = "";
+      goals.forEach((g, m) => {
+        const li = document.createElement("li");
+        li.appendChild(icon((c, k) => P.medal(c, k / 2, k * 0.62, k * 0.4, (have >> m) & 1), 30));
+        li.append(g);
+        ul.appendChild(li);
+      });
       $("intro-controls").innerHTML = G.players === 2
         ? "<b>Hero</b>: W A S D &nbsp;·&nbsp; <b>Fairy</b>: arrow keys"
         : "Move with arrow keys or W A S D";
@@ -525,10 +724,45 @@
       G.mode = "play";
       UI.show(null);
     },
-    showWon(W) {
+    showWon(W, r, prog) {
       if (G.mode !== "won" || G.world !== W) return; // they already moved on
-      $("won-stars").textContent = W.starsTotal ? `Stars: ${W.stars} / ${W.starsTotal}` : "";
       $("won-title").textContent = W.def.goal === "friend" ? "You rescued your friend!" : "You found the gift!";
+      // three medals pop in one by one
+      const medals = $("won-medals");
+      medals.innerHTML = "";
+      const labels = ["Finished", "All stars", "Beat the clock"];
+      for (let m = 0; m < 3; m++) {
+        const got = (r.medalsNow >> m) & 1;
+        const cell = document.createElement("div");
+        cell.className = "won-medal" + (got ? " got" : "");
+        cell.style.animationDelay = 0.25 + m * 0.35 + "s";
+        cell.appendChild(icon((c, k) => P.medal(c, k / 2, k * 0.62, k * 0.4, got), 64));
+        const cap = document.createElement("span");
+        cap.textContent = labels[m] + ((prog.newMedals >> m) & 1 ? " · new!" : "");
+        cell.appendChild(cap);
+        medals.appendChild(cell);
+        if (got) setTimeout(() => sfx("medal"), 250 + m * 350);
+      }
+      const secs = (t) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, "0")}`;
+      const lines = [
+        ["Points collected", r.points],
+        [`Time ${secs(r.time)} (clock ${secs(r.par)})`, r.timeBonus],
+        [`Hearts left × 50`, r.heartBonus],
+        ["No ouch bonus", r.noOuch],
+      ];
+      $("won-sheet").innerHTML = lines.map(([k, v]) => `<div><span>${k}</span><b>${v ? "+" + v.toLocaleString() : "0"}</b></div>`).join("") +
+        `<div class="total"><span>Score</span><b id="won-total">0</b></div>`;
+      $("won-best").textContent = prog.isBest ? "New best score!" : `Best: ${prog.best.toLocaleString()}`;
+      $("won-best").classList.toggle("new", prog.isBest);
+      // count the score up like an arcade machine
+      const start = performance.now();
+      const tick = () => {
+        const k = Math.min(1, (performance.now() - start) / 1200);
+        $("won-total").textContent = Math.round(r.score * (1 - Math.pow(1 - k, 3))).toLocaleString();
+        if (k < 1 && G.mode === "won") requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+      UI.stickers(prog.stickers);
       const last = G.customDef || G.levelIndex >= window.MAZOOLE_LEVELS.length - 1;
       $("btn-next").textContent = last ? "Back to menu" : "Next maze →";
       document.querySelector("#won .btn-menu").hidden = last && !(G.customDef && G.customDef.fromEditor);
@@ -538,6 +772,11 @@
     next() {
       if (G.customDef && G.customDef.fromEditor) return window.MazooleEditor.open();
       if (G.customDef || G.levelIndex >= window.MAZOOLE_LEVELS.length - 1) return UI.menu();
+      const nextDef = window.MAZOOLE_LEVELS[G.levelIndex + 1];
+      if (window.MazooleProgress && !window.MazooleProgress.unlocked(nextDef)) {
+        UI.menu();
+        return UI.toast(`The secret level opens at ${nextDef.bonus} medals. Replay mazes to earn more!`);
+      }
       G.levelIndex++;
       startLevel(currentDef());
     },
@@ -549,6 +788,39 @@
       $("hud-hearts").textContent = "♥".repeat(Math.max(0, W.hearts)) + "♡".repeat(Math.max(0, HEARTS - W.hearts));
       $("hud-keys").textContent = W.keys;
       $("hud-stars").textContent = `${W.stars}/${W.starsTotal}`;
+      $("hud-score").textContent = W.score.toLocaleString();
+    },
+    clock() {
+      const W = G.world;
+      if (!W || !W.playersList || !W.playersList.length) return;
+      const sec = Math.floor(W.time);
+      if (sec === UI.lastSec) return;
+      UI.lastSec = sec;
+      const el = $("hud-clock");
+      el.textContent = `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, "0")}`;
+      el.classList.toggle("late", W.time > W.par);
+      $("hud-score").textContent = W.score.toLocaleString();
+    },
+    // Celebrate new stickers, one after another
+    stickers(list) {
+      if (!list || !list.length) return;
+      UI.stickerQueue = (UI.stickerQueue || []).concat(list);
+      if (!UI.stickerBusy) UI.nextSticker();
+    },
+    nextSticker() {
+      const st = UI.stickerQueue.shift();
+      const box = $("sticker-pop");
+      if (!st) { UI.stickerBusy = false; box.hidden = true; return; }
+      UI.stickerBusy = true;
+      box.innerHTML = "";
+      box.appendChild(window.MazooleProgress.stickerCanvas(st, 54, true));
+      const t = document.createElement("div");
+      t.innerHTML = `<small>New sticker!</small><b>${st.name}</b>`;
+      box.appendChild(t);
+      box.hidden = false;
+      box.classList.remove("pop"); void box.offsetWidth; box.classList.add("pop");
+      sfx("sticker");
+      setTimeout(UI.nextSticker, 2600);
     },
   };
 

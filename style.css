@@ -227,3 +227,47 @@ button.rec { background: #ffd6d6; animation: pulse 0.8s infinite alternate; }
 @keyframes pulse { to { transform: scale(1.06); } }
 #ed-export-text { width: 100%; font: 14px/1.4 ui-monospace, Menlo, monospace; border: 2px solid var(--ink); border-radius: 8px; padding: 8px; }
 @media (prefers-reduced-motion: reduce) { button.rec { animation: none; } }
+
+/* ------------------------------------------------------------ added: scores, medals, stickers */
+#hud .score b { font-size: 24px; color: #7a3fd0; font-variant-numeric: tabular-nums; }
+#hud .clock b { font-variant-numeric: tabular-nums; }
+#hud .clock b.late { color: #d9344f; }
+.medal-line { display: flex; justify-content: center; align-items: center; gap: 10px; margin: 0 0 8px !important; }
+.card-foot { display: flex; justify-content: space-between; align-items: center; margin-top: auto; padding-top: 4px; }
+.card-foot .medals { display: flex; gap: 2px; }
+.card-foot .best { font-size: 16px; opacity: 0.75; font-variant-numeric: tabular-nums; }
+.card.bonus { background: #fff4c2; }
+.card.locked { opacity: 0.7; background: repeating-linear-gradient(-45deg, var(--paper) 0 10px, #efe9dc 10px 20px); }
+.badge.gold { background: #ffe58a; border-color: #c49b00; }
+.goals { list-style: none; padding: 0; margin: 0 auto 14px; display: inline-flex; flex-direction: column; gap: 4px; text-align: left; font-size: 20px; }
+.goals li { display: flex; align-items: center; gap: 8px; }
+#won-medals { display: flex; justify-content: center; gap: 14px; margin: 6px 0 4px; }
+.won-medal { display: flex; flex-direction: column; align-items: center; font-size: 15px; opacity: 0; animation: medal-in 0.45s cubic-bezier(.2, 1.6, .5, 1) forwards; }
+.won-medal:not(.got) { filter: grayscale(1); }
+.won-medal.got span { font-weight: bold; }
+@keyframes medal-in { from { opacity: 0; transform: scale(0.2) rotate(-30deg); } to { opacity: 1; transform: none; } }
+#won-sheet { max-width: 340px; margin: 8px auto 0; font-size: 19px; text-align: left; }
+#won-sheet div { display: flex; justify-content: space-between; gap: 10px; border-bottom: 1.5px dashed rgba(0, 0, 0, 0.15); padding: 2px 0; }
+#won-sheet b { font-variant-numeric: tabular-nums; }
+#won-sheet .total { font-size: 28px; border-bottom: none; padding-top: 4px; }
+#won-sheet .total b { color: #7a3fd0; }
+#won-best { margin: 2px 0 8px !important; font-size: 19px !important; opacity: 0.8; }
+#won-best.new { opacity: 1; color: #d9344f; font-weight: bold; animation: wiggle 0.6s ease-in-out 3; }
+@keyframes wiggle { 25% { transform: rotate(-3deg); } 75% { transform: rotate(3deg); } }
+#sticker-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin: 10px 0 14px; }
+.sticker { display: flex; align-items: center; gap: 8px; text-align: left; padding: 8px; border: 2px dashed rgba(0, 0, 0, 0.2); border-radius: 14px; }
+.sticker.got { border: 2px solid var(--ink); background: #fff; box-shadow: 2px 3px 0 rgba(0, 0, 0, 0.15); transform: rotate(-1deg); }
+.sticker:nth-child(even).got { transform: rotate(1.2deg); }
+.sticker div { display: flex; flex-direction: column; }
+.sticker b { font-size: 18px; }
+.sticker span { font-size: 14px; opacity: 0.75; }
+#sticker-pop {
+  position: fixed; right: 16px; top: calc(58px + env(safe-area-inset-top, 0px)); z-index: 40;
+  display: flex; align-items: center; gap: 10px; background: #fff; border: 3px solid var(--ink);
+  border-radius: 16px 10px 18px 12px; padding: 8px 16px 8px 10px; box-shadow: 4px 5px 0 rgba(0, 0, 0, 0.2);
+}
+#sticker-pop div { display: flex; flex-direction: column; line-height: 1.1; }
+#sticker-pop small { font-size: 15px; color: #d9344f; }
+#sticker-pop b { font-size: 22px; }
+#sticker-pop.pop { animation: medal-in 0.5s cubic-bezier(.2, 1.6, .5, 1); }
+@media (prefers-reduced-motion: reduce) { .won-medal, #sticker-pop.pop, #won-best.new { animation: none; opacity: 1; } }

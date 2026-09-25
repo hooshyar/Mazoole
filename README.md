@@ -38,6 +38,10 @@ there, you both win. You share 5 hearts.
 | 💔 staircase with a broken heart | Trap. Costs a heart unless you fly over it |
 | Spiky green monster, spider | Walk back and forth. Dodge them using the side nooks |
 | Angry fairy | Shoots a sparkle beam down her corridor. A dotted line warns you before she fires. Wait in a nook and then run! |
+| 🍬 candy | 10 points. Grab them quickly one after another for a combo, up to ×5 |
+| 🧊 ice | You slide until something stops you. Plan your slides! |
+| 🌀 portals `3`–`9` | Step on one and pop out of the other portal with the same number |
+| 👻 ghost | Chases whoever is closest, but only when you're near. Flying keeps you safe. After catching someone it goes home and sleeps for a moment |
 | 🟪 purple plate | Opens every purple gate, but **only while someone stands on it**. Flying doesn't count. Level 4 needs both players to take turns |
 
 ## What we saw in the drawings
@@ -60,6 +64,25 @@ The **long corridor drawing** (`drawings/bina-corridor.jpg`) became level 2, *Bi
 
 Level 1, *Pencil Practice*, is a short tutorial that teaches each item once.
 Level 4, *Two Friends, One Plate*, is a two-player puzzle built around the purple plates.
+
+The newer levels each show off one idea:
+
+| Level | Idea |
+|---|---|
+| 5. Candy Trail | A candy maze with a chasing ghost. Collect the key and escape through the loops |
+| 6. Slippery Pond | An ice puzzle. The gift needs 7 planned slides |
+| 7. Portal Party | Four rooms with no doors between them, connected only by numbered portals |
+| ★ The Fairy Queen's Castle | The secret level. It unlocks at 12 medals and combines ice, portals, a ghost, traps and the fairy's beam |
+
+## Points, medals and stickers
+
+- **Points:** candy 10 (×combo), star 100, key/button/unlock 25, wings 15. Points pop up where you grab them.
+- **The score sheet** at the end adds a time bonus (10 points for every second under the clock), 50 for each heart left, and 300 if nobody said ouch.
+- **Three medals per maze**, shown on the intro card before you start: ① finish ② collect every star ③ beat the clock. Medals stay earned, so you can go back for the one you missed.
+- **Best scores and medals** show on each level card. The total medal count unlocks the secret level.
+- **Sticker book:** 14 stickers, such as *Untouchable*, *Candy Combo*, *Ghost Buster*, *Ice Skater*, *Portal Hopper* and *Best Friends*. A new sticker pops up the moment you earn it.
+
+Everything is saved in the browser you play in.
 
 ## Make your own maze
 
@@ -88,7 +111,11 @@ G  goal             a b c  buttons     A B C  doors (same letter)
 k  key              L  lock door       w  wings           *  star
 h  heart trap       m  monster         s  spider          F  angry fairy
 x  purple plate     X  purple gate (open only while someone is on a plate)
++  candy            ~  ice             3-9  portal pairs   g  ghost
 ```
+
+Optional level settings: `par: 40` sets the seconds for the clock medal (otherwise it's
+worked out from the maze), and `bonus: 12` hides the level until 12 medals are collected.
 
 Add `coop: true` to a level that needs two players.
 
@@ -106,6 +133,7 @@ It's plain HTML, CSS and JavaScript, with no framework, no build step and no dep
 | `js/editor.js` | The in-game maze painter |
 | `js/photo.js` | Photo → maze: finds the paper, detects pencil lines with a local-contrast threshold, snaps them to a grid |
 | `js/voices.js` | Records and plays your own sound effects |
+| `js/progress.js` | Medals, best scores and the sticker book |
 | `tools/bundle.py` | Packs everything into one HTML file, for sharing a single file |
 
 Design choices:

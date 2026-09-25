@@ -17,6 +17,13 @@
 //   F  angry fairy  (shoots a sparkle beam, time your run!)
 //   x  purple plate -> opens every purple gate  X  only while someone stands on it
 //                      (flying doesn't count!)
+//   +  candy        -> 10 points (grab them fast for a combo!)
+//   ~  ice          -> you slide until something stops you
+//   3 4 5 ... 9  portals: step on one and pop out of the other with the same number
+//   g  ghost        (chases you! wings make you safe from it)
+//
+// Optional:  par: 40  = seconds to beat for the clock medal
+//            bonus: 12  = medals needed to unlock the level
 //
 // Add  coop: true  to a level that needs two players.
 //
@@ -96,6 +103,80 @@ window.MAZOOLE_LEVELS = [
       "#...X.......#......#",
       "#...#...x...#......#",
       "####################",
+    ],
+  },
+  {
+    name: "Candy Trail",
+    story: "Gobble the candy trail! A scribble ghost chases you, but wings make you safe. Find the key to open the gift.",
+    goal: "gift",
+    map: [
+      "#####################",
+      "#*+++++++++++++++++*#",
+      "#+###+#####+#####+#+#",
+      "#+#w#+++++#+#+++#+#+#",
+      "#+#+#+###+#+#+#+#+g+#",
+      "#1++++++++++++#+++#+#",
+      "#2###+#+##+##+#+#+#+#",
+      "#+++#+#++#L#++#+#k#+#",
+      "#+#+#+####G######+#+#",
+      "#*+++++++++++++++++*#",
+      "#####################",
+    ],
+  },
+  {
+    name: "Slippery Pond",
+    story: "The pond is frozen! Once you start sliding you can't stop until you bump into something. Plan your slides to reach the stars.",
+    goal: "gift",
+    map: [
+      "####################",
+      "#1..#~~~~~~~~~~~~~*#",
+      "#2..~~~~~~~#~~~~~~~#",
+      "#...#~~~~~~~~~~#~~~#",
+      "##.##~~~~#~#~~~~~~~#",
+      "#*~~~~~~~~~~~~~#~~~#",
+      "#~~~~#~~~~~~~~~~~~~#",
+      "#~~~~~~~~~#~~~~~~#~#",
+      "#~~~#~~~~~~~~*~~~~G#",
+      "####################",
+    ],
+  },
+  {
+    name: "Portal Party",
+    story: "Four rooms, no doors between them. Step on a swirly portal to pop out of the one with the same number!",
+    goal: "friend",
+    map: [
+      "######################",
+      "#1....3#*...5#......F#",
+      "#2.....#.....#.......#",
+      "#......#..m..#...4...#",
+      "#..*...#.....#.......#",
+      "########.....####L####",
+      "#....5.#.....#.......#",
+      "#......###.###...G...#",
+      "#.k....F.....#.......#",
+      "#....4.#.3...#..*....#",
+      "######################",
+    ],
+  },
+  {
+    name: "The Fairy Queen's Castle",
+    story: "The secret last castle! Everything you've learned: ice, portals, keys, ghosts and the angry fairy queen. Good luck, heroes!",
+    goal: "friend",
+    bonus: 12,
+    map: [
+      "##########################",
+      "#1...#~~~~~~~#+++++++++*+#",
+      "#2...~~~~#~~~~+###+###+#+#",
+      "#....#~~~~~~~#+#w#+++#+#+#",
+      "##3###~~~~#~~~+#+#+#+#+#+#",
+      "#++++#########+++++#g+++k#",
+      "#+##+#.....a.......####A##",
+      "#+#*+#.h..h..h.....####.##",
+      "#++++#.......##########L##",
+      "######...3...#++++++++++*#",
+      "#F........h..#+++++++++++#",
+      "#............#++++++++++G#",
+      "##########################",
     ],
   },
 ];
