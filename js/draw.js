@@ -149,7 +149,7 @@
   }
 
   // ---------------------------------------------------------------- tiles
-  const DOOR_COLORS = { a: "#e5484d", b: "#3e7bfa", c: "#2fae62" };
+  const DOOR_COLORS = { a: "#e5484d", b: "#3e7bfa", c: "#2fae62", x: "#9b5de5" };
 
   function door(ctx, x, y, s, letter, open, seed) {
     const r = rng(seed);
@@ -197,6 +197,17 @@
     stroke(ctx, [[cx - s * 0.36, cy - s * 0.36], [cx + s * 0.36, cy - s * 0.36], [cx + s * 0.36, cy + s * 0.36], [cx - s * 0.36, cy + s * 0.36], [cx - s * 0.36, cy - s * 0.36]], r, s * 0.04, 1.3, INK, 0.7);
     ellipse(ctx, cx, cy, s * 0.24, s * (pressed ? 0.12 : 0.22), r, 2, INK, c);
     if (!pressed) ellipse(ctx, cx - s * 0.07, cy - s * 0.07, s * 0.05, s * 0.04, r, 1, "#fff", "#fff");
+  }
+
+  // Purple floor plate: only works while someone stands on it
+  function plate(ctx, x, y, s, pressed, seed) {
+    const r = rng(seed);
+    const px = x * s + s * 0.14, py = y * s + s * (pressed ? 0.3 : 0.22), w = s * 0.72, h = s * (pressed ? 0.46 : 0.54);
+    ctx.beginPath(); ctx.rect(px, py, w, h);
+    crayon(ctx, px, py, w, h, DOOR_COLORS.x, r, pressed ? 0.35 : 0.6);
+    stroke(ctx, [[px, py], [px + w, py], [px + w, py + h], [px, py + h], [px, py]], r, s * 0.04, 2);
+    // two little footprints: "stand here!"
+    for (const o of [-0.12, 0.12]) ellipse(ctx, px + w / 2 + o * s, py + h / 2, s * 0.06, s * 0.1, r, 1.2, INK, pressed ? DOOR_COLORS.x : PAPER);
   }
 
   function key(ctx, cx, cy, s, r) {
@@ -439,7 +450,7 @@
   }
 
   window.Pencil = {
-    INK, PAPER, DOOR_COLORS, rng, hash, stroke, ellipse, paper, walls, door, lockDoor, button,
+    INK, PAPER, DOOR_COLORS, rng, hash, stroke, ellipse, paper, walls, door, lockDoor, button, plate,
     key, wingsShape, star, heart, heartTrap, gift, hero, fairy, monster, spider, angryFairy,
     beam, friendInBed,
   };

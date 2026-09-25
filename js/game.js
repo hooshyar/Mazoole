@@ -17,13 +17,20 @@
   ];
 
   // ------------------------------------------------------------ level parsing
+  const photoCache = new Map();
   function parse(def) {
     const grid = def.map.map((row) => row.split(""));
     const h = grid.length, w = grid[0].length;
     const world = {
       def, w, h, grid, starts: [], monsters: [], turrets: [], starsTotal: 0,
-      pressed: new Set(), keys: 0, stars: 0, hearts: HEARTS, dirty: true,
+      pressed: new Set(), held: false, keys: 0, stars: 0, hearts: HEARTS, dirty: true,
     };
+    if (def.photo) { // a photo of the drawing, shown faintly under the maze
+      let img = photoCache.get(def.photo);
+      if (!img) { img = new Image(); img.src = def.photo; photoCache.set(def.photo, img); }
+      world.photoImg = img;
+      if (!img.complete) img.addEventListener("load", () => (world.dirty = true), { once: true });
+    }
     for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
       const c = grid[y][x];
       if (c === "1" || c === "2") { world.starts[+c - 1] = [x, y]; grid[y][x] = "."; }
@@ -65,14 +72,14 @@
   const border = (world, x, y) => x <= 0 || y <= 0 || x >= world.w - 1 || y >= world.h - 1;
   const isDoor = (c) => c >= "A" && c <= "C";
   const isButton = (c) => c >= "a" && c <= "c";
+  const closedDoor = (world, c) => (isDoor(c) && !world.pressed.has(c.toLowerCase())) || (c === "X" && !world.held);
 
   // Can something that walks on the ground stand here?
   function walkable(world, x, y) {
     if (!inside(world, x, y)) return false;
     const c = world.grid[y][x];
     if (c === "#" || c === "F" || c === "L") return false;
-    if (isDoor(c)) return world.pressed.has(c.toLowerCase());
-    return true;
+    return !closedDoor(world, c);
   }
   function monsterFree(world, x, y) {
     return walkable(world, x, y) && world.grid[y][x] !== "G";
@@ -155,7 +162,7 @@
       o.start(); o.stop(actx.currentTime + dur);
     } catch (_) { /* no audio, no problem */ }
   }
-  const SFX = {
+  const BEEPS = {
     step: () => {},
     key: () => { beep(880, 0.12); setTimeout(() => beep(1320, 0.15), 90); },
     star: () => { beep(1046, 0.1); setTimeout(() => beep(1568, 0.18), 70); },
@@ -165,7 +172,14 @@
     hurt: () => beep(300, 0.35, "sawtooth", 80),
     win: () => [523, 659, 784, 1046].forEach((f, i) => setTimeout(() => beep(f, 0.25), i * 140)),
     lose: () => [392, 330, 262].forEach((f, i) => setTimeout(() => beep(f, 0.3), i * 180)),
+    unpress: () => beep(500, 0.15, "square", 250),
   };
+  // Your own recorded voices win over the beeps (see js/voices.js)
+  function sfx(name) {
+    if (!G.sound) return;
+    if (window.MazooleVoices && window.MazooleVoices.play(name)) return;
+    (BEEPS[name] || (() => {}))();
+  }
 
   // ------------------------------------------------------------ update
   function update(dt) {
@@ -176,6 +190,9 @@
     if (G.mode !== "play") return;
 
     for (const p of W.playersList) updatePlayer(W, p, dt);
+    // purple plates only work while someone (not flying) stands on one
+    const held = W.playersList.some((p) => p.flyT <= 0 && W.grid[Math.round(p.fy)][Math.round(p.fx)] === "x");
+    if (held !== W.held) { W.held = held; W.dirty = true; sfx(held ? "button" : "unpress"); }
     for (const m of W.monsters) updateMonster(W, m, dt);
     for (const f of W.turrets) updateTurret(W, f);
 
@@ -215,7 +232,7 @@
         const nx = p.x + dx, ny = p.y + dy;
         if (playerCanEnter(W, p, nx, ny)) {
           if (W.grid[ny][nx] === "L" && p.flyT <= 0) {
-            W.keys--; W.grid[ny][nx] = "."; W.dirty = true; SFX.unlock(); burst(nx, ny, "#f5d33b"); UI.updateHud();
+            W.keys--; W.grid[ny][nx] = "."; W.dirty = true; sfx("unlock"); burst(nx, ny, "#f5d33b"); UI.updateHud();
           }
           p.tx = nx; p.ty = ny; p.moving = true;
         }
@@ -263,10 +280,10 @@
 
   function enterTile(W, p) {
     const c = W.grid[p.y][p.x];
-    if (c === "k") { W.keys++; W.grid[p.y][p.x] = "."; SFX.key(); burst(p.x, p.y, "#f5d33b"); }
-    else if (c === "*") { W.stars++; W.grid[p.y][p.x] = "."; SFX.star(); burst(p.x, p.y, "#ffc93c"); }
-    else if (c === "w") { if (p.flyT <= 0) SFX.wings(); p.flyT = WINGS_TIME; p.wx = p.x; p.wy = p.y; burst(p.x, p.y, "#c9a6ff"); }
-    else if (isButton(c) && !W.pressed.has(c)) { W.pressed.add(c); W.dirty = true; SFX.button(); burst(p.x, p.y, P.DOOR_COLORS[c]); }
+    if (c === "k") { W.keys++; W.grid[p.y][p.x] = "."; sfx("key"); burst(p.x, p.y, "#f5d33b"); }
+    else if (c === "*") { W.stars++; W.grid[p.y][p.x] = "."; sfx("star"); burst(p.x, p.y, "#ffc93c"); }
+    else if (c === "w") { if (p.flyT <= 0) sfx("wings"); p.flyT = WINGS_TIME; p.wx = p.x; p.wy = p.y; burst(p.x, p.y, "#c9a6ff"); }
+    else if (isButton(c) && !W.pressed.has(c)) { W.pressed.add(c); W.dirty = true; sfx("button"); burst(p.x, p.y, P.DOOR_COLORS[c]); }
     else if (c === "h" && p.flyT <= 0) hurt(W, p, "trap");
     else if (c === "G") return win(W);
     UI.updateHud();
@@ -293,7 +310,7 @@
     let x = f.x + f.dx, y = f.y + f.dy;
     while (inside(W, x, y)) {
       const c = W.grid[y][x];
-      if (c === "#" || c === "F" || c === "L" || (isDoor(c) && !W.pressed.has(c.toLowerCase()))) break;
+      if (c === "#" || c === "F" || c === "L" || closedDoor(W, c)) break;
       f.cells.push([x, y]);
       x += f.dx; y += f.dy;
     }
@@ -303,7 +320,7 @@
     if (p.inv > 0 || G.mode !== "play") return;
     G.lastHurt = { why, x: p.x, y: p.y };
     W.hearts--;
-    SFX.hurt();
+    sfx("hurt");
     burst(p.x, p.y, "#b5405a");
     p.hurtT = 0.6;
     p.inv = INVULN;
@@ -311,13 +328,13 @@
     p.moving = false;
     p.x = p.fx = p.sx; p.y = p.fy = p.sy;
     UI.updateHud();
-    if (W.hearts <= 0) { G.mode = "lost"; SFX.lose(); UI.showLost(); }
+    if (W.hearts <= 0) { G.mode = "lost"; sfx("lose"); UI.showLost(); }
   }
 
   function win(W) {
     G.mode = "won";
     W.won = true;
-    SFX.win();
+    sfx("win");
     const gy = W.grid.findIndex((r) => r.includes("G")), gx = W.grid[gy].indexOf("G");
     for (let i = 0; i < 40; i++) burst(gx, gy, ["#e5484d", "#f5d33b", "#3e7bfa", "#2fae62", "#ff8fc1"][i % 5], 1);
     UI.updateHud();
@@ -349,12 +366,19 @@
     const sctx = target || staticCtx;
     sctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     P.paper(sctx, W.w * s, W.h * s, s);
+    if (W.photoImg && W.photoImg.complete && W.photoImg.naturalWidth) {
+      sctx.save(); sctx.globalAlpha = W.photoAlpha || 0.22;
+      sctx.drawImage(W.photoImg, 0, 0, W.w * s, W.h * s);
+      sctx.restore();
+    }
     P.walls(sctx, W.grid, (c) => c === "#", s);
     for (let y = 0; y < W.h; y++) for (let x = 0; x < W.w; x++) {
       const c = W.grid[y][x], seed = P.hash(x, y, 5);
       if (isDoor(c)) P.door(sctx, x, y, s, c.toLowerCase(), W.pressed.has(c.toLowerCase()), seed);
       else if (c === "L") P.lockDoor(sctx, x, y, s, seed);
       else if (isButton(c)) P.button(sctx, x, y, s, c, W.pressed.has(c), seed);
+      else if (c === "X") P.door(sctx, x, y, s, "x", W.held, seed);
+      else if (c === "x") P.plate(sctx, x, y, s, W.held, seed);
     }
     W.dirty = false;
   }
@@ -459,8 +483,11 @@
       window.MAZOOLE_LEVELS.forEach((lv, i) => {
         const b = document.createElement("button");
         b.className = "card";
-        b.innerHTML = `<b>${i + 1}. ${lv.name}</b><span>${lv.story}</span>`;
-        b.onclick = () => { G.levelIndex = i; G.customDef = null; startLevel(lv); };
+        b.innerHTML = `<b>${i + 1}. ${lv.name}</b><span>${lv.story}</span>` + (lv.coop ? `<i class="badge">2 players</i>` : "");
+        b.onclick = () => {
+          if (lv.coop && G.players === 1) { G.players = 2; UI.toast("This maze needs two players, so the fairy is joining in!"); }
+          G.levelIndex = i; G.customDef = null; startLevel(lv);
+        };
         list.appendChild(b);
       });
       const saved = window.MazooleEditor && window.MazooleEditor.load();
@@ -478,6 +505,13 @@
       G.customDef = def;
       startLevel(def);
     },
+    toast(msg) {
+      const t = $("toast");
+      t.textContent = msg;
+      t.hidden = false;
+      clearTimeout(UI.toastTimer);
+      UI.toastTimer = setTimeout(() => (t.hidden = true), 3500);
+    },
     showIntro(def) {
       $("intro-title").textContent = def.name;
       $("intro-story").textContent = def.story || "";
@@ -492,6 +526,7 @@
       UI.show(null);
     },
     showWon(W) {
+      if (G.mode !== "won" || G.world !== W) return; // they already moved on
       $("won-stars").textContent = W.starsTotal ? `Stars: ${W.stars} / ${W.starsTotal}` : "";
       $("won-title").textContent = W.def.goal === "friend" ? "You rescued your friend!" : "You found the gift!";
       const last = G.customDef || G.levelIndex >= window.MAZOOLE_LEVELS.length - 1;

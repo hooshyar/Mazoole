@@ -15,6 +15,10 @@
 //   m  spiky monster (walks left and right)
 //   s  spider       (hangs on a thread: goes up and down)
 //   F  angry fairy  (shoots a sparkle beam, time your run!)
+//   x  purple plate -> opens every purple gate  X  only while someone stands on it
+//                      (flying doesn't count!)
+//
+// Add  coop: true  to a level that needs two players.
 //
 // The outside edge must be walls.
 
@@ -74,6 +78,24 @@ window.MAZOOLE_LEVELS = [
       "#.###.h..h..#.#....s.....#",
       "#12.A....h.......h.......#",
       "##########################",
+    ],
+  },
+  {
+    name: "Two Friends, One Plate",
+    story: "A two-player puzzle! Purple gates only stay open while someone stands on a purple plate. Take turns helping each other.",
+    goal: "gift",
+    coop: true,
+    map: [
+      "####################",
+      "#1..#.......#......#",
+      "#...#...x...#..*...#",
+      "#2..........X...G..#",
+      "#...#...m...#......#",
+      "#...#########......#",
+      "#...#.....*.#......#",
+      "#...X.......#......#",
+      "#...#...x...#......#",
+      "####################",
     ],
   },
 ];

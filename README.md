@@ -13,6 +13,10 @@ heroes.
 
 Open `index.html` in a browser. There's no install and no build step. Double-clicking the file works.
 
+**Online:** every push to `main` publishes the game to GitHub Pages
+(`https://<owner>.github.io/<repo>/`). One-time setup: in the repo, go to
+**Settings → Pages → Source** and choose **GitHub Actions**.
+
 | Who | Keys | Tablet / phone |
 |---|---|---|
 | **Hero** (player 1, red cape) | `W` `A` `S` `D` | left pad |
@@ -34,6 +38,7 @@ there, you both win. You share 5 hearts.
 | 💔 staircase with a broken heart | Trap. Costs a heart unless you fly over it |
 | Spiky green monster, spider | Walk back and forth. Dodge them using the side nooks |
 | Angry fairy | Shoots a sparkle beam down her corridor. A dotted line warns you before she fires. Wait in a nook and then run! |
+| 🟪 purple plate | Opens every purple gate, but **only while someone stands on it**. Flying doesn't count. Level 4 needs both players to take turns |
 
 ## What we saw in the drawings
 
@@ -54,12 +59,25 @@ The **long corridor drawing** (`drawings/bina-corridor.jpg`) became level 2, *Bi
 - The angry fairy's long line aimed along the top is **the beam**.
 
 Level 1, *Pencil Practice*, is a short tutorial that teaches each item once.
+Level 4, *Two Friends, One Plate*, is a two-player puzzle built around the purple plates.
 
 ## Make your own maze
 
 **In the game:** open the menu and choose **✏️ Draw your own maze**. Pick a tool
 and paint with the mouse or a finger, then press **Play it!**. Your maze is saved in the
 browser and appears in the menu. Press **Copy level** to get its text.
+
+**From a photo:** in the maze painter, press **📷 From a photo** and pick a picture
+of a drawing. Mazoole finds the paper, turns the pencil lines into walls, and puts
+the hero and the goal as far apart as it can. The result is a rough draft: the photo stays
+faintly underneath, so you can trace over it. Paint the missing walls, erase stray
+ones, and add doors and monsters. The **Lines** slider sets how faint a line can be
+and still count as a wall.
+
+**Your own sounds:** in the menu, press **🎤 Our sounds** to record a short clip
+for each moment: key, star, button, lock, wings, ouch, hooray and "oh no". If
+the microphone isn't allowed, upload a sound file instead. Sounds are saved in
+this browser only.
 
 **In code:** every level is a small text drawing in [`js/levels.js`](js/levels.js),
 one character per square:
@@ -69,7 +87,10 @@ one character per square:
 G  goal             a b c  buttons     A B C  doors (same letter)
 k  key              L  lock door       w  wings           *  star
 h  heart trap       m  monster         s  spider          F  angry fairy
+x  purple plate     X  purple gate (open only while someone is on a plate)
 ```
+
+Add `coop: true` to a level that needs two players.
 
 Paste a copied level into the `MAZOOLE_LEVELS` list and it shows up in the menu.
 
@@ -83,6 +104,9 @@ It's plain HTML, CSS and JavaScript, with no framework, no build step and no dep
 | `js/levels.js` | The levels as text maps |
 | `js/game.js` | Grid movement, buttons and doors, keys, wings, monsters, fairy beams, hearts, co-op input, touch pads, sound effects (small WebAudio beeps, no audio files) |
 | `js/editor.js` | The in-game maze painter |
+| `js/photo.js` | Photo → maze: finds the paper, detects pencil lines with a local-contrast threshold, snaps them to a grid |
+| `js/voices.js` | Records and plays your own sound effects |
+| `tools/bundle.py` | Packs everything into one HTML file, for sharing a single file |
 
 Design choices:
 - **Movement is tile by tile, animated smoothly.** Collisions stay simple and exact, it's easy for young players, and levels can be written as text.
@@ -93,10 +117,6 @@ Design choices:
 The site is static, so any static host works. On GitHub Pages, go to Settings → Pages, choose "Deploy from branch" and pick the branch.
 
 ## Ideas for next time
-- **Photo to maze:** take a picture of a new drawing and get a playable grid
-  automatically (threshold the image, detect the pencil lines, snap them to a grid). The
-  text-map format was chosen so this can be added later without touching the game.
-- Use the original photo, faded, as the level background.
-- Record the kids' voices for the sound effects.
+- Smarter photo reading: recognize drawn doors, stars and creatures and place them automatically.
 - More powers: shrink to fit through cracks, a lantern for dark mazes, a time-freeze.
-- Pressure plates that only work while someone stands on them, for puzzles that need both players.
+- Share a maze with a link, so friends can play it on their own devices.
