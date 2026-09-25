@@ -13,9 +13,10 @@ heroes.
 
 Open `index.html` in a browser. There's no install and no build step. Double-clicking the file works.
 
-**Online:** every push to `main` publishes the game to GitHub Pages
-(`https://<owner>.github.io/<repo>/`). One-time setup: in the repo, go to
-**Settings → Pages → Source** and choose **GitHub Actions**.
+**Online:** every push to `main` copies the site to the `gh-pages` branch, and GitHub
+Pages serves it at `https://<owner>.github.io/<repo>/`. One-time setup: in the repo, go to
+**Settings → Pages → Build and deployment**, choose **Deploy from a branch**, and pick
+`gh-pages` / `(root)`. On a free GitHub plan the repository must be public for Pages to work.
 
 | Who | Keys | Tablet / phone |
 |---|---|---|
