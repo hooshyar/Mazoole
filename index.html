@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <title>Mazoole</title>
+  <meta name="description" content="A co-op maze game made from hand-drawn mazes.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header id="hud">
+    <button class="btn-menu small" title="Menu (Esc)">☰</button>
+    <span id="hud-name" class="name">Mazoole</span>
+    <span class="stat hearts" id="hud-hearts"></span>
+    <span class="stat"><span id="hud-key-icon"></span><b id="hud-keys">0</b></span>
+    <span class="stat"><span id="hud-star-icon"></span><b id="hud-stars">0/0</b></span>
+    <span class="grow"></span>
+    <button id="btn-restart" class="small" title="Start again (R)">↺</button>
+    <button id="btn-sound" class="small">♪ on</button>
+  </header>
+
+  <main id="stage"><canvas id="game"></canvas></main>
+
+  <!-- touch controls (tablets / phones) -->
+  <div id="touch">
+    <div class="dpad" data-player="0">
+      <button data-dir="up">▲</button><button data-dir="left">◀</button><button data-dir="right">▶</button><button data-dir="down">▼</button>
+    </div>
+    <div class="dpad p2" data-player="1">
+      <button data-dir="up">▲</button><button data-dir="left">◀</button><button data-dir="right">▶</button><button data-dir="down">▼</button>
+    </div>
+  </div>
+
+  <!-- screens -->
+  <section id="menu" class="screen">
+    <div class="sheet">
+      <h1>Mazoole</h1>
+      <p class="sub">mazes drawn by hand, played together</p>
+      <div class="pick">
+        <button id="pick-1" data-players="1"><span>1 player</span></button>
+        <button id="pick-2" data-players="2"><span>2 players</span></button>
+      </div>
+      <div id="level-list"></div>
+      <div class="menu-actions">
+        <button id="btn-draw" class="big">✏️ Draw your own maze</button>
+        <button id="btn-voices">🎤 Our sounds</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="intro" class="screen" hidden>
+    <div class="sheet small">
+      <h2 id="intro-title"></h2>
+      <p id="intro-story"></p>
+      <p id="intro-controls" class="hint"></p>
+      <button id="btn-go" class="big">Go! ▶</button>
+    </div>
+  </section>
+
+  <section id="won" class="screen" hidden>
+    <div class="sheet small">
+      <h2 id="won-title">Hooray!</h2>
+      <p id="won-stars"></p>
+      <button id="btn-next" class="big">Next maze →</button>
+      <button id="btn-again">Play again</button>
+      <button class="btn-menu">Menu</button>
+    </div>
+  </section>
+
+  <section id="lost" class="screen" hidden>
+    <div class="sheet small">
+      <h2>Oops! No more hearts</h2>
+      <p>Everybody back to the start. You can do it!</p>
+      <button id="btn-retry" class="big">Try again ↺</button>
+      <button class="btn-menu">Menu</button>
+    </div>
+  </section>
+
+  <section id="editor" class="screen" hidden>
+    <div class="edbar">
+      <div id="ed-tools"></div>
+      <div class="ed-row">
+        <input id="ed-name" maxlength="30" placeholder="Maze name" aria-label="Maze name">
+        <select id="ed-goal" aria-label="Goal"><option value="gift">Goal: gift</option><option value="friend">Goal: friend in bed</option></select>
+        <select id="ed-size" aria-label="Size"><option value="small">Small</option><option value="medium" selected>Medium</option><option value="big">Big</option></select>
+        <button id="ed-new">New maze</button>
+        <button id="ed-clear">Erase all</button>
+        <label class="filebtn" id="ed-photo-btn">📷 From a photo<input type="file" accept="image/*" id="ed-photo"></label>
+        <span id="ed-photo-tools" hidden>
+          <label for="ed-sense">Lines</label>
+          <input type="range" id="ed-sense" min="1" max="10" value="7" aria-label="How many pencil lines become walls">
+          <label><input type="checkbox" id="ed-show-photo" checked> Show photo</label>
+        </span>
+        <button id="ed-copy">Copy level</button>
+        <button class="btn-menu">Menu</button>
+        <button id="ed-play" class="big">Play it! ▶</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="ed-export" class="screen" hidden>
+    <div class="sheet small">
+      <h2>Your level as text</h2>
+      <p class="hint">Copy this and paste it into <code>js/levels.js</code>.</p>
+      <textarea id="ed-export-text" readonly rows="12" aria-label="Level text"></textarea>
+      <button id="ed-export-close" class="big">Done</button>
+    </div>
+  </section>
+
+  <section id="voices" class="screen" hidden>
+    <div class="sheet">
+      <h2>Our sounds</h2>
+      <p class="hint">Record your own voices for the game. Each sound can be up to 3 seconds long, and is saved in this browser only.</p>
+      <div id="voice-list"></div>
+      <button class="btn-menu big">Done</button>
+    </div>
+  </section>
+
+  <div id="toast" role="status" hidden></div>
+
+  <script src="js/draw.js"></script>
+  <script src="js/levels.js"></script>
+  <script src="js/game.js"></script>
+  <script src="js/photo.js"></script>
+  <script src="js/voices.js"></script>
+  <script src="js/editor.js"></script>
+</body>
+</html>
