@@ -73,6 +73,10 @@ The newer levels each show off one idea:
 | 5. Candy Trail | A candy maze with a chasing ghost. Collect the key and escape through the loops |
 | 6. Slippery Pond | An ice puzzle. The gift needs 7 planned slides |
 | 7. Portal Party | Four rooms with no doors between them, connected only by numbered portals |
+| 8. Spider Garden | Flower beds, dangling spiders, a button, a key, and a sealed flower bed that needs wings |
+| 9. Ghost Library | Two ghosts, candy shelves, portals, and one key for two locks: pick your way |
+| 10. Frozen Fortress | An ice puzzle: slide over the button to open the fortress door |
+| 11. Midnight Bakery | A candy ring, a monster, and a long hall where the angry fairy's beam sweeps by |
 | ★ The Fairy Queen's Castle | The secret level. It unlocks at 12 medals and combines ice, portals, a ghost, traps and the fairy's beam |
 
 ## 🔦 Treasure hunt (AR)
@@ -127,13 +131,23 @@ Finishing a hunt gives the *Treasure Hunter* sticker. Finding all six in one hun
 
 ## 🦆 Quack Hunt (AR)
 
-Pencil ducks fly around your room. Menu → **🦆 Quack Hunt** → **Start**, then hold the phone up and
+Pencil ducks fly around your room. Menu → **🦆 Quack Hunt** → pick a level, then hold the phone up and
 turn around to find them (a yellow arrow shows the way). When a duck is in the circle, the circle turns
 red: press the big **🎯 Shoot** button (tapping the screen works too). A game has 10 ducks, two at a time,
 with 4 shots for each pair. Ducks fly away if you're too slow or out of shots, and they get a little
 faster each wave. Catching ducks in a row doubles and then triples the points.
 
-**Records** are saved in the browser: the most ducks in one game, the best score and all ducks caught.
+**Five levels**, each with its own twist. Catch 6 ducks to open the next one; 6, 8 and 10 ducks earn ★, ★★ and ★★★:
+
+| Level | Twist |
+|---|---|
+| 1. Duck Pond | Nice and easy |
+| 2. Windy Day | Gusts make the ducks zig and zag |
+| 3. Duckling Dash | Tiny yellow ducklings: small, quick, 150 points |
+| 4. Ghost Ducks | Ducks fade in and out; you can only catch them while you can see them |
+| 5. Mama Duck | The giant Mama Duck (with a pink bow) needs 3 hits and brings her ducklings |
+
+**Records** are saved in the browser for every level: the most ducks and the best score, plus all ducks caught.
 
 **Secrets** 🤫 (the start screen gives a hint for each one until it's found):
 
@@ -147,7 +161,7 @@ faster each wave. Catching ducks in a row doubles and then triples the points.
 | Perfect Ten | Catch all 10 ducks: a 🎁 for the power bag, and from then on ducks are sometimes rainbow-colored |
 
 It uses the same look-around engine as the magic treasure hunt (camera + motion sensors, or drag to look
-around). Stickers: *Duck Catcher* (10 ducks), *Sharp Eye* (all 10 in one game), *Secret Keeper* (3 secrets).
+around). Stickers: *Duck Catcher* (10 ducks), *Sharp Eye* (all 10 in one game), *Secret Keeper* (3 secrets), *Mama's Hug* (catch Mama Duck).
 
 ## 🔊 Sounds
 
@@ -165,7 +179,7 @@ are), and there's a pop, a falling whistle and a magic chime for secrets. Your o
 - **The score sheet** at the end adds a time bonus (10 points for every second under the clock), 50 for each heart left, and 300 if nobody said ouch.
 - **Three medals per maze**, shown on the intro card before you start: ① finish ② collect every star ③ beat the clock. Medals stay earned, so you can go back for the one you missed.
 - **Best scores and medals** show on each level card. The total medal count unlocks the secret level.
-- **Sticker book:** 19 stickers, such as *Untouchable*, *Candy Combo*, *Ghost Buster*, *Ice Skater*, *Portal Hopper*, *Best Friends* and *Treasure Hunter*. A new sticker pops up the moment you earn it.
+- **Sticker book:** 20 stickers, such as *Untouchable*, *Candy Combo*, *Ghost Buster*, *Ice Skater*, *Portal Hopper*, *Best Friends* and *Treasure Hunter*. A new sticker pops up the moment you earn it.
 
 Everything is saved in the browser you play in.
 
@@ -204,7 +218,9 @@ worked out from the maze), and `bonus: 12` hides the level until 12 medals are c
 
 Add `coop: true` to a level that needs two players.
 
-Paste a copied level into the `MAZOOLE_LEVELS` list and it shows up in the menu.
+Paste a copied level into the `MAZOOLE_LEVELS` list and it shows up in the menu. Then run
+`node tools/check-levels.js`: it plays every maze by the game's rules (doors, keys, ice, portals, wings)
+and tells you whether the goal and every star can be reached.
 
 ## How it's built (for grown-ups)
 
@@ -223,6 +239,7 @@ It's plain HTML, CSS and JavaScript, with no framework, no build step and no dep
 | `js/sounds.js` | All the sound effects, synthesized with WebAudio (some panned left/right) |
 | `js/ducks.js` | Quack Hunt: the duck drawing, waves, shooting, records and secrets |
 | `js/powers.js` | The power bag: saves found treasures and shows them as power buttons while playing |
+| `tools/check-levels.js` | Checks that every maze can be finished and every star reached |
 | `tools/bundle.py` | Packs everything into one HTML file, for sharing a single file |
 
 Design choices:

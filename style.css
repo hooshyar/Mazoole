@@ -369,6 +369,10 @@ button.rec { background: #ffd6d6; animation: pulse 0.8s infinite alternate; }
 #duck-shoot span { font-size: 20px; font-weight: bold; }
 #duck-shoot.lock { background: #ff6b6b; animation: pulse 0.35s infinite alternate; }
 #ducks-pic { display: flex; justify-content: center; }
+#ducks-levels { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 8px; margin: 6px 0 10px; }
+.duck-level .stars, #ducks-done-stars { color: #f0a500; font-size: 22px; letter-spacing: 2px; }
+#ducks-done-stars { font-size: 40px !important; margin: 0 !important; line-height: 1; }
+#ducks-done-stars small { font-size: 18px; color: var(--ink); letter-spacing: 0; opacity: 0.75; }
 #ducks-secrets { list-style: none; padding: 0; margin: 4px 0 12px; text-align: left; font-size: 18px; }
 #ducks-secrets li { padding: 3px 8px; border-bottom: 1.5px dashed rgba(0, 0, 0, 0.15); }
 #ducks-secrets li.got { color: #2f8a4a; }
