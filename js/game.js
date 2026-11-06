@@ -5,6 +5,7 @@
   // ------------------------------------------------------------ tuning knobs
   const SPEED = 5.5;          // player tiles per second
   const WINGS_TIME = 6;       // seconds of flying per wings pickup
+  const STAR_TIME = 7;        // seconds of the star power (nothing can hurt you)
   const HEARTS = 5;           // shared hearts per level
   const INVULN = 1.5;         // seconds of blinking after getting hurt
   const BEAM = { charge: 1.2, fire: 1.1, cycle: 4.2 };
@@ -124,7 +125,7 @@
 
   function makePlayer(i, start) {
     return { id: i, x: start[0], y: start[1], fx: start[0], fy: start[1], sx: start[0], sy: start[1], tx: 0, ty: 0,
-      moving: false, facing: 1, flyT: 0, inv: 0, hurtT: 0, dir: [1, 0], slide: null };
+      moving: false, facing: 1, flyT: 0, inv: 0, starT: 0, hurtT: 0, dir: [1, 0], slide: null };
   }
 
   function startLevel(def) {
@@ -245,7 +246,7 @@
 
     // collisions
     for (const p of W.playersList) {
-      if (p.inv > 0) continue;
+      if (p.inv > 0 || p.starT > 0) continue;
       const grounded = p.flyT <= 0;
       if (grounded) for (const m of W.monsters) {
         if (m.wait > 0) continue; // a sleeping ghost can't catch anyone
@@ -267,6 +268,7 @@
 
   function updatePlayer(W, p, dt) {
     if (p.inv > 0) p.inv -= dt;
+    if (p.starT > 0) p.starT -= dt;
     if (p.hurtT > 0) p.hurtT -= dt;
     if (p.flyT > 0) {
       p.flyT -= dt;
@@ -386,7 +388,7 @@
     if (m.fx == null) { m.fx = m.x; m.fy = m.y; }
     if (m.wait > 0) { m.wait -= dt; return; }
     if (!m.moving) {
-      const targets = new Set(W.playersList.filter((p) => p.flyT <= 0 && p.inv <= 0).map((p) => Math.round(p.fx) + "," + Math.round(p.fy)));
+      const targets = new Set(W.playersList.filter((p) => p.flyT <= 0 && p.inv <= 0 && p.starT <= 0).map((p) => Math.round(p.fx) + "," + Math.round(p.fy)));
       let step = null;
       if (targets.size) {
         const prev = new Map([[m.x + "," + m.y, null]]), q = [[m.x, m.y]];
@@ -449,7 +451,7 @@
   }
 
   function hurt(W, p, why) {
-    if (p.inv > 0 || G.mode !== "play") return;
+    if (p.inv > 0 || p.starT > 0 || G.mode !== "play") return;
     G.lastHurt = { why, x: p.x, y: p.y };
     W.hearts--;
     W.hurts++;
@@ -491,6 +493,38 @@
     const prog = PR ? PR.finish(W.def, r) : { isBest: false, newMedals: 0, stickers: [], best: r.score };
     UI.updateHud();
     setTimeout(() => UI.showWon(W, r, prog), 900);
+  }
+
+  // ------------------------------------------------------------ powers from the treasure hunt
+  // js/powers.js keeps the bag; this makes each power do its thing. Returns false
+  // when a power isn't useful right now (so it stays in the bag).
+  function usePower(kind) {
+    const W = G.world;
+    if (G.mode !== "play" || !W || !W.playersList.length) return false;
+    const ps = W.playersList, p0 = ps[0];
+    if (kind === "wings") {
+      for (const p of ps) { if (p.flyT <= 0) count("flights"); p.flyT = WINGS_TIME; p.wx = p.x; p.wy = p.y; burst(p.x, p.y, "#c9a6ff"); }
+      sfx("wings");
+    } else if (kind === "star") {
+      for (const p of ps) { p.starT = STAR_TIME; burst(p.x, p.y, "#ffc93c", 14); }
+      sfx("star");
+    } else if (kind === "key") {
+      W.keys++; burst(p0.x, p0.y, "#f5d33b"); sfx("key");
+    } else if (kind === "heart") {
+      if (W.hearts >= HEARTS + 2) return false;
+      W.hearts++; burst(p0.x, p0.y, "#ff5c7a", 12); sfx("star");
+    } else if (kind === "candy") {
+      addPoints(W, 50, p0.x, p0.y, "+50"); burst(p0.x, p0.y, "#ff5c7a"); sfx("candy", 5);
+    } else if (kind === "gift") {
+      // magic gift: every colored door opens
+      const shut = new Set();
+      for (const row of W.grid) for (const ch of row) if (isDoor(ch) && !W.pressed.has(ch.toLowerCase())) shut.add(ch.toLowerCase());
+      if (!shut.size) return false;
+      for (const b of shut) W.pressed.add(b);
+      W.dirty = true; burst(p0.x, p0.y, "#e5484d", 16); sfx("unlock");
+    } else return false;
+    UI.updateHud();
+    return true;
   }
 
   function burst(x, y, color, n) {
@@ -579,6 +613,18 @@
     for (const p of players) {
       if (p.inv > 0 && Math.floor(t * 12) % 2) continue;
       const o = { moving: p.moving, facing: p.facing, flying: p.flyT > 0, hurt: p.hurtT > 0 };
+      if (p.starT > 0) { // star power: a golden glow and stars spinning around
+        const cx = p.fx * s + s / 2, cy = p.fy * s + s / 2;
+        c.save();
+        c.globalAlpha = p.starT < 1.5 && Math.floor(t * 8) % 2 ? 0.25 : 0.55;
+        c.fillStyle = "#ffe066";
+        c.beginPath(); c.arc(cx, cy, s * 0.62, 0, Math.PI * 2); c.fill();
+        c.restore();
+        for (let i = 0; i < 3; i++) {
+          const a = t * 5 + (i * Math.PI * 2) / 3;
+          P.star(c, cx + Math.cos(a) * s * 0.55, cy + Math.sin(a) * s * 0.55, s * 0.12, r, ["#ffc93c", "#ff8fc1", "#3e7bfa"][i]);
+        }
+      }
       (p.id === 0 ? P.hero : P.fairy)(c, p.fx * s + s / 2, p.fy * s + s / 2, s, t, o);
       if (p.flyT > 0) {
         c.save();
@@ -684,6 +730,7 @@
         b.onclick = () => UI.playCustom(saved);
         list.appendChild(b);
       }
+      if (window.MazoolePowers) window.MazoolePowers.render();
       document.querySelectorAll("[data-players]").forEach((b) => b.classList.toggle("on", +b.dataset.players === G.players));
       $("touch").classList.toggle("two", G.players === 2);
     },
@@ -718,6 +765,7 @@
       $("intro-controls").innerHTML = G.players === 2
         ? "<b>Hero</b>: W A S D &nbsp;·&nbsp; <b>Fairy</b>: arrow keys"
         : "Move with arrow keys or W A S D";
+      if (window.MazoolePowers && window.MazoolePowers.total()) $("intro-controls").innerHTML += "<br>🎒 You have powers from your treasure hunt! Tap them at the top.";
       UI.show("intro");
     },
     go() {
@@ -790,6 +838,7 @@
       $("hud-keys").textContent = W.keys;
       $("hud-stars").textContent = `${W.stars}/${W.starsTotal}`;
       $("hud-score").textContent = W.score.toLocaleString();
+      if (window.MazoolePowers) window.MazoolePowers.render();
     },
     clock() {
       const W = G.world;
@@ -877,6 +926,6 @@
     requestAnimationFrame(frame);
   }
 
-  window.Mazoole = { G, UI, sfx, parse, renderWorld, drawStatic, startLevel, resize: () => resize(), get dpr() { return dpr; } };
+  window.Mazoole = { G, UI, sfx, usePower, parse, renderWorld, drawStatic, startLevel, resize: () => resize(), get dpr() { return dpr; } };
   window.addEventListener("DOMContentLoaded", init);
 })();

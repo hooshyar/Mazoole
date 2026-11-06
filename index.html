@@ -18,6 +18,7 @@
     <span class="stat"><span id="hud-star-icon"></span><b id="hud-stars">0/0</b></span>
     <span class="stat score" title="Score"><b id="hud-score">0</b></span>
     <span class="stat clock" title="Time">⏱ <b id="hud-clock">0:00</b></span>
+    <span class="stat powers" id="hud-powers" title="Your power bag: tap a power to use it" hidden></span>
     <span class="grow"></span>
     <button id="btn-restart" class="small" title="Start again (R)">↺</button>
     <button id="btn-sound" class="small">♪ on</button>
@@ -40,6 +41,7 @@
     <div class="sheet">
       <h1>Mazoole</h1>
       <p class="sub">mazes drawn by hand, played together</p>
+      <p class="power-line" id="power-line" hidden></p>
       <p class="medal-line">Medals: <b id="medal-total">0</b> <button id="btn-stickers" class="small">📒 Sticker book</button></p>
       <div class="pick">
         <button id="pick-1" data-players="1"><span>1 player</span></button>
@@ -138,16 +140,28 @@
   <section id="hunt" class="screen" hidden>
     <div class="sheet">
       <h2>🔦 Treasure hunt</h2>
-      <p class="hint">Real treasure cards hidden around the house. Find one with the camera and its treasure jumps out of the paper!</p>
-      <ol class="hunt-steps">
-        <li><b>Print</b> the treasure cards and cut them out. <button id="hunt-print-btn" class="small">🖨️ Print cards</button></li>
-        <li><b>Hide</b> them around the house: under a cushion, behind the door, next to a picture…</li>
-        <li><b>Record a clue</b> for each card if you like: “Look under the big table!”</li>
-        <li>Give the phone to the treasure hunter and press <b>Start</b>.</li>
-      </ol>
       <p class="hunt-count-line">How many treasures? <span id="hunt-count"></span></p>
-      <div id="hunt-list"></div>
-      <button id="hunt-start" class="big">Start the hunt! 🔦</button>
+      <div class="hunt-modes">
+        <div class="hunt-mode magic">
+          <h3>✨ Magic hunt</h3>
+          <p>No cards needed, play alone! Treasures hide in the air all around you. Turn around with the phone, and when one floats into the circle, it's yours.</p>
+          <div class="hunt-go" id="hunt-go-magic"></div>
+        </div>
+        <div class="hunt-mode cards">
+          <h3>🗺️ Card hunt</h3>
+          <ol class="hunt-steps">
+            <li><b>Print</b> the treasure cards and cut them out. <button id="hunt-print-btn" class="small">🖨️ Print cards</button></li>
+            <li><b>Hide</b> them around the house: under a cushion, behind the door, next to a picture…</li>
+            <li>Give the phone to the treasure hunter and press <b>Start</b>.</li>
+          </ol>
+          <details class="hunt-clues">
+            <summary>🎤 Record a clue for each card (optional)</summary>
+            <div id="hunt-list"></div>
+          </details>
+          <div class="hunt-go" id="hunt-go-cards"></div>
+        </div>
+      </div>
+      <p class="hint">Every treasure you find goes into your 🎒 power bag. Tap it while you play a maze to use its power!</p>
       <button class="btn-menu">Menu</button>
     </div>
   </section>
@@ -174,7 +188,7 @@
       <p id="hunt-done-text"></p>
       <div id="hunt-done-row"></div>
       <button id="hunt-again" class="big">Hunt again 🔦</button>
-      <button id="hunt-setup">Hide them again</button>
+      <button id="hunt-setup">Change the hunt</button>
       <button class="btn-menu">Menu</button>
     </div>
   </section>
@@ -191,6 +205,7 @@
   <script src="js/photo.js"></script>
   <script src="js/voices.js"></script>
   <script src="js/editor.js"></script>
+  <script src="js/powers.js"></script>
   <script src="js/hunt.js"></script>
 </body>
 </html>
