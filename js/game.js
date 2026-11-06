@@ -204,11 +204,18 @@
     slide: () => beep(900, 0.15, "sine", 600),
     medal: () => beep(1175, 0.18, "triangle", 1568),
     sticker: () => [784, 988, 1175, 1568].forEach((f, i) => setTimeout(() => beep(f, 0.18), i * 90)),
+    // duck game (js/ducks.js)
+    shoot: () => { beep(1100, 0.09, "square", 160); setTimeout(() => beep(240, 0.12, "triangle", 90), 40); },
+    quack: () => { beep(560, 0.11, "sawtooth", 360); setTimeout(() => beep(520, 0.13, "sawtooth", 330), 150); },
+    flyaway: () => beep(420, 0.5, "sine", 1500),
+    empty: () => beep(180, 0.06, "square"),
+    secret: () => [523, 784, 659, 1046, 1318].forEach((f, i) => setTimeout(() => beep(f, 0.16, "triangle"), i * 110)),
   };
   // Your own recorded voices win over the beeps (see js/voices.js)
   function sfx(name, arg) {
     if (!G.sound) return;
     if (window.MazooleVoices && window.MazooleVoices.play(name)) return;
+    if (window.MazooleSounds && window.MazooleSounds.play(name, arg)) return; // js/sounds.js
     (BEEPS[name] || (() => {}))(arg);
   }
 
@@ -771,6 +778,7 @@
     go() {
       if (G.mode !== "intro") return;
       G.mode = "play";
+      sfx("go");
       UI.show(null);
     },
     showWon(W, r, prog) {

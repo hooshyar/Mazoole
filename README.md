@@ -125,13 +125,47 @@ Other browsers load the bundled [jsQR](https://github.com/cozmo/jsQR) fallback
 
 Finishing a hunt gives the *Treasure Hunter* sticker. Finding all six in one hunt gives *Super Seeker*.
 
+## 🦆 Quack Hunt (AR)
+
+Pencil ducks fly around your room. Menu → **🦆 Quack Hunt** → **Start**, then hold the phone up and
+turn around to find them (a yellow arrow shows the way). When a duck is in the circle, the circle turns
+red: press the big **🎯 Shoot** button (tapping the screen works too). A game has 10 ducks, two at a time,
+with 4 shots for each pair. Ducks fly away if you're too slow or out of shots, and they get a little
+faster each wave. Catching ducks in a row doubles and then triples the points.
+
+**Records** are saved in the browser: the most ducks in one game, the best score and all ducks caught.
+
+**Secrets** 🤫 (the start screen gives a hint for each one until it's found):
+
+| Secret | How |
+|---|---|
+| The Golden Duck | Sometimes a shiny golden duck flies by: 500 points and a ⭐ for the power bag |
+| The Ceiling Owl | Look straight up and shoot the sleeping owl |
+| The Floor Frog | Look straight down and shoot the hiding frog |
+| Earthquake! | Shake the phone: every duck gets dizzy and slow for a few seconds |
+| Two with One | Catch two ducks with one shot |
+| Perfect Ten | Catch all 10 ducks: a 🎁 for the power bag, and from then on ducks are sometimes rainbow-colored |
+
+It uses the same look-around engine as the magic treasure hunt (camera + motion sensors, or drag to look
+around). Stickers: *Duck Catcher* (10 ducks), *Sharp Eye* (all 10 in one game), *Secret Keeper* (3 secrets).
+
+## 🔊 Sounds
+
+Every game has its own sound effects, made in the browser with WebAudio (no sound files):
+a soft click on buttons; in the mazes a key jingle, door creak, "bonk", fanfare and sad trombone; in
+the treasure hunts a sparkle, whoosh and plop for each treasure, rising ticks while you hold one in the
+circle, a ghostly "boo", and a sonar ping from the **left or right speaker** that tells you which way
+to turn. In Quack Hunt the ducks flap and quack from the side they're on (so you can hear where they
+are), and there's a pop, a falling whistle and a magic chime for secrets. Your own recordings from
+**🎤 Our sounds** still win, and **♪** turns everything off. The sounds live in `js/sounds.js`.
+
 ## Points, medals and stickers
 
 - **Points:** candy 10 (×combo), star 100, key/button/unlock 25, wings 15. Points pop up where you grab them.
 - **The score sheet** at the end adds a time bonus (10 points for every second under the clock), 50 for each heart left, and 300 if nobody said ouch.
 - **Three medals per maze**, shown on the intro card before you start: ① finish ② collect every star ③ beat the clock. Medals stay earned, so you can go back for the one you missed.
 - **Best scores and medals** show on each level card. The total medal count unlocks the secret level.
-- **Sticker book:** 16 stickers, such as *Untouchable*, *Candy Combo*, *Ghost Buster*, *Ice Skater*, *Portal Hopper*, *Best Friends* and *Treasure Hunter*. A new sticker pops up the moment you earn it.
+- **Sticker book:** 19 stickers, such as *Untouchable*, *Candy Combo*, *Ghost Buster*, *Ice Skater*, *Portal Hopper*, *Best Friends* and *Treasure Hunter*. A new sticker pops up the moment you earn it.
 
 Everything is saved in the browser you play in.
 
@@ -186,6 +220,8 @@ It's plain HTML, CSS and JavaScript, with no framework, no build step and no dep
 | `js/voices.js` | Records and plays your own sound effects |
 | `js/progress.js` | Medals, best scores and the sticker book |
 | `js/hunt.js` | The treasure hunt: printable cards, camera, QR reading, the magic look-around hunt (motion sensors), clues, saved progress |
+| `js/sounds.js` | All the sound effects, synthesized with WebAudio (some panned left/right) |
+| `js/ducks.js` | Quack Hunt: the duck drawing, waves, shooting, records and secrets |
 | `js/powers.js` | The power bag: saves found treasures and shows them as power buttons while playing |
 | `tools/bundle.py` | Packs everything into one HTML file, for sharing a single file |
 

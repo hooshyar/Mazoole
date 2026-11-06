@@ -50,6 +50,7 @@
       <div id="level-list"></div>
       <div class="menu-actions">
         <button id="btn-hunt" class="big">🔦 Treasure hunt</button>
+        <button id="btn-ducks" class="big">🦆 Quack Hunt</button>
         <button id="btn-draw" class="big">✏️ Draw your own maze</button>
         <button id="btn-voices">🎤 Our sounds</button>
       </div>
@@ -174,6 +175,10 @@
       <div id="hunt-bag"></div>
     </div>
     <div id="hunt-say" role="status" hidden></div>
+    <div id="duck-bar" hidden>
+      <div id="duck-info"><b id="duck-score">0</b><span id="duck-shells" title="Shots left"></span><span id="duck-wave"></span></div>
+      <button id="duck-shoot" title="Shoot">🎯<span>Shoot</span></button>
+    </div>
     <div id="hunt-clue" hidden>
       <div id="hunt-clue-pic"></div>
       <div id="hunt-clue-text"></div>
@@ -193,11 +198,37 @@
     </div>
   </section>
 
+  <!-- duck game (js/ducks.js) -->
+  <section id="ducks" class="screen" hidden>
+    <div class="sheet small">
+      <h2>🦆 Quack Hunt</h2>
+      <div id="ducks-pic"></div>
+      <p>Ducks are flying around the room! Turn around with the phone to find them. Get a duck in the circle and press <b>🎯 Shoot</b>. Catch as many of the 10 as you can.</p>
+      <p id="ducks-records" class="hint"></p>
+      <h3 id="ducks-secret-count"></h3>
+      <ul id="ducks-secrets"></ul>
+      <button id="ducks-start" class="big">Start! 🦆</button>
+      <button class="btn-menu">Menu</button>
+    </div>
+  </section>
+
+  <section id="ducks-done" class="screen" hidden>
+    <div class="sheet small">
+      <h2 id="ducks-done-title"></h2>
+      <div id="ducks-done-row"></div>
+      <div id="ducks-done-sheet"></div>
+      <button id="ducks-again" class="big">Play again 🦆</button>
+      <button id="ducks-back">Records &amp; secrets</button>
+      <button class="btn-menu">Menu</button>
+    </div>
+  </section>
+
   <div id="hunt-print" aria-hidden="true"></div>
 
   <div id="toast" role="status" hidden></div>
   <div id="sticker-pop" role="status" hidden></div>
 
+  <script src="js/sounds.js"></script>
   <script src="js/draw.js"></script>
   <script src="js/levels.js"></script>
   <script src="js/progress.js"></script>
@@ -207,5 +238,6 @@
   <script src="js/editor.js"></script>
   <script src="js/powers.js"></script>
   <script src="js/hunt.js"></script>
+  <script src="js/ducks.js"></script>
 </body>
 </html>
