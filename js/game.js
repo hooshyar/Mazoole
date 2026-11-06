@@ -612,6 +612,7 @@
     const dt = Math.min(0.05, (now - (frame.last || now)) / 1000);
     frame.last = now;
     if (G.mode === "edit") { window.MazooleEditor && window.MazooleEditor.render(dt); }
+    else if (G.mode === "hunt") { /* the camera screen covers the game (js/hunt.js) */ }
     else if (G.world) {
       update(dt);
       if (G.world.dirty) drawStatic(G.world, tile);
@@ -876,6 +877,6 @@
     requestAnimationFrame(frame);
   }
 
-  window.Mazoole = { G, UI, parse, renderWorld, drawStatic, startLevel, resize: () => resize(), get dpr() { return dpr; } };
+  window.Mazoole = { G, UI, sfx, parse, renderWorld, drawStatic, startLevel, resize: () => resize(), get dpr() { return dpr; } };
   window.addEventListener("DOMContentLoaded", init);
 })();

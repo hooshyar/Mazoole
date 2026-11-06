@@ -52,7 +52,8 @@
   }
 
   let recording = null;
-  async function record(name, btn) {
+  // `done` runs after a recording is saved (the treasure hunt uses it for its clue list)
+  async function record(name, btn, done) {
     if (recording) { recording.stop(); return; }
     if (!navigator.mediaDevices || !window.MediaRecorder) {
       window.Mazoole.UI.toast("Recording isn't available here. Use “Upload” with a sound file instead.");
@@ -73,7 +74,7 @@
       recording = null;
       const url = await blobToUrl(new Blob(chunks, { type: rec.mimeType || "audio/webm" }));
       if (set(name, url)) { play(name); window.Mazoole.UI.toast("Saved!"); }
-      build();
+      (done || build)();
     };
     recording = rec;
     rec.start();
@@ -129,5 +130,5 @@
     $("btn-voices").onclick = open;
   });
 
-  window.MazooleVoices = { play, open };
+  window.MazooleVoices = { play, open, record, set };
 })();
