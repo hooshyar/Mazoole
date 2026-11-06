@@ -266,8 +266,69 @@ button.rec { background: #ffd6d6; animation: pulse 0.8s infinite alternate; }
   display: flex; align-items: center; gap: 10px; background: #fff; border: 3px solid var(--ink);
   border-radius: 16px 10px 18px 12px; padding: 8px 16px 8px 10px; box-shadow: 4px 5px 0 rgba(0, 0, 0, 0.2);
 }
+#sticker-pop[hidden] { display: none; }
 #sticker-pop div { display: flex; flex-direction: column; line-height: 1.1; }
 #sticker-pop small { font-size: 15px; color: #d9344f; }
 #sticker-pop b { font-size: 22px; }
 #sticker-pop.pop { animation: medal-in 0.5s cubic-bezier(.2, 1.6, .5, 1); }
 @media (prefers-reduced-motion: reduce) { .won-medal, #sticker-pop.pop, #won-best.new { animation: none; opacity: 1; } }
+
+/* ------------------------------------------------------------ added: treasure hunt */
+#btn-hunt { background: #ffd8ec; }
+.hunt-steps { text-align: left; font-size: 20px; margin: 4px auto 10px; max-width: 560px; padding-left: 28px; }
+.hunt-steps li { margin: 4px 0; }
+.hunt-steps button { margin: 0 0 0 6px; }
+.hunt-count-line { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 6px; }
+#hunt-count button { margin: 0 3px; min-width: 48px; opacity: 0.6; }
+#hunt-count button.on { opacity: 1; background: #fff4c2; border-width: 3px; }
+#hunt-list { display: flex; flex-direction: column; gap: 4px; margin: 6px 0 12px; text-align: left; }
+.hunt-row canvas { flex: none; }
+.hunt-row.unused { opacity: 0.45; }
+
+#hunt-play.screen { padding: 0; background: #111; z-index: 20; display: block; }
+#hunt-play.screen[hidden] { display: none; }
+#hunt-video, #hunt-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+#hunt-video { object-fit: cover; }
+#hunt-canvas { pointer-events: none; }
+.hunt-top {
+  position: absolute; left: 0; right: 0; top: 0; display: flex; align-items: center; gap: 10px;
+  padding: calc(8px + env(safe-area-inset-top, 0px)) 12px 8px;
+  background: linear-gradient(rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0));
+}
+#hunt-exit { flex: none; }
+#hunt-bag { flex: 1; display: flex; justify-content: center; gap: 6px; flex-wrap: wrap; }
+#hunt-bag .slot { display: grid; place-items: center; width: 50px; height: 50px; border-radius: 50%; background: rgba(251, 248, 241, 0.55); border: 2px dashed rgba(255, 255, 255, 0.9); }
+#hunt-bag .slot.got { background: var(--paper); border: 3px solid var(--yellow); }
+#hunt-bag .slot.pop { animation: medal-in 0.5s cubic-bezier(.2, 1.6, .5, 1); }
+#hunt-say {
+  position: absolute; left: 50%; top: 22%; transform: translateX(-50%) rotate(-1deg); width: min(90vw, 460px);
+  background: var(--paper); border: 3px solid var(--ink); border-radius: 16px 10px 18px 12px; padding: 10px 18px;
+  font-size: 26px; text-align: center; box-shadow: 4px 5px 0 rgba(0, 0, 0, 0.25);
+}
+#hunt-say[hidden] { display: none; }
+#hunt-say button { margin-top: 10px; }
+#hunt-clue {
+  position: absolute; left: 50%; bottom: calc(14px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%) rotate(0.6deg);
+  display: flex; align-items: center; gap: 10px; width: min(92vw, 440px); background: var(--paper);
+  border: 3px solid var(--ink); border-radius: 18px 12px 20px 14px; padding: 6px 12px; box-shadow: 4px 5px 0 rgba(0, 0, 0, 0.25);
+}
+#hunt-clue[hidden] { display: none; }
+#hunt-clue-pic canvas { display: block; animation: wiggle 1.4s ease-in-out infinite; }
+#hunt-clue-text { flex: 1; display: flex; flex-direction: column; line-height: 1.1; }
+#hunt-clue-text b { font-size: 28px; }
+#hunt-clue-text span { font-size: 18px; opacity: 0.75; }
+#hunt-hear { font-size: 28px; padding: 4px 12px; }
+#hunt-done-canvas { display: block; margin: 0 auto; }
+#hunt-done-row { display: flex; justify-content: center; gap: 6px; margin: 0 0 10px; }
+@media (prefers-reduced-motion: reduce) { #hunt-clue-pic canvas, #hunt-bag .slot.pop { animation: none; } }
+
+/* printed treasure cards: only the cards go on paper */
+#hunt-print { display: none; }
+@media print {
+  @page { size: A4; margin: 10mm; }
+  html, body { height: auto; overflow: visible; background: #fff; display: block; }
+  body > *:not(#hunt-print) { display: none !important; }
+  #hunt-print { display: grid !important; grid-template-columns: 90mm 90mm; gap: 6mm; justify-content: center; }
+  .hunt-card { width: 90mm; height: 86mm; border: 0.4mm dashed #999; break-inside: avoid; }
+  .hunt-card img { width: 100%; height: 100%; display: block; }
+}

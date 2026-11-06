@@ -47,6 +47,7 @@
       </div>
       <div id="level-list"></div>
       <div class="menu-actions">
+        <button id="btn-hunt" class="big">🔦 Treasure hunt</button>
         <button id="btn-draw" class="big">✏️ Draw your own maze</button>
         <button id="btn-voices">🎤 Our sounds</button>
       </div>
@@ -133,6 +134,53 @@
     </div>
   </section>
 
+  <!-- treasure hunt (js/hunt.js) -->
+  <section id="hunt" class="screen" hidden>
+    <div class="sheet">
+      <h2>🔦 Treasure hunt</h2>
+      <p class="hint">Real treasure cards hidden around the house. Find one with the camera and its treasure jumps out of the paper!</p>
+      <ol class="hunt-steps">
+        <li><b>Print</b> the treasure cards and cut them out. <button id="hunt-print-btn" class="small">🖨️ Print cards</button></li>
+        <li><b>Hide</b> them around the house: under a cushion, behind the door, next to a picture…</li>
+        <li><b>Record a clue</b> for each card if you like: “Look under the big table!”</li>
+        <li>Give the phone to the treasure hunter and press <b>Start</b>.</li>
+      </ol>
+      <p class="hunt-count-line">How many treasures? <span id="hunt-count"></span></p>
+      <div id="hunt-list"></div>
+      <button id="hunt-start" class="big">Start the hunt! 🔦</button>
+      <button class="btn-menu">Menu</button>
+    </div>
+  </section>
+
+  <section id="hunt-play" class="screen" hidden>
+    <video id="hunt-video" playsinline muted autoplay></video>
+    <canvas id="hunt-canvas"></canvas>
+    <div class="hunt-top">
+      <button id="hunt-exit" class="small" title="Stop the hunt">✕</button>
+      <div id="hunt-bag"></div>
+    </div>
+    <div id="hunt-say" role="status" hidden></div>
+    <div id="hunt-clue" hidden>
+      <div id="hunt-clue-pic"></div>
+      <div id="hunt-clue-text"></div>
+      <button id="hunt-hear" title="Hear the clue again">🔊</button>
+    </div>
+  </section>
+
+  <section id="hunt-done" class="screen" hidden>
+    <div class="sheet small">
+      <h2>Treasure found!</h2>
+      <canvas id="hunt-done-canvas"></canvas>
+      <p id="hunt-done-text"></p>
+      <div id="hunt-done-row"></div>
+      <button id="hunt-again" class="big">Hunt again 🔦</button>
+      <button id="hunt-setup">Hide them again</button>
+      <button class="btn-menu">Menu</button>
+    </div>
+  </section>
+
+  <div id="hunt-print" aria-hidden="true"></div>
+
   <div id="toast" role="status" hidden></div>
   <div id="sticker-pop" role="status" hidden></div>
 
@@ -143,5 +191,6 @@
   <script src="js/photo.js"></script>
   <script src="js/voices.js"></script>
   <script src="js/editor.js"></script>
+  <script src="js/hunt.js"></script>
 </body>
 </html>

@@ -75,13 +75,37 @@ The newer levels each show off one idea:
 | 7. Portal Party | Four rooms with no doors between them, connected only by numbered portals |
 | ★ The Fairy Queen's Castle | The secret level. It unlocks at 12 medals and combines ice, portals, a ghost, traps and the fairy's beam |
 
+## 🔦 Treasure hunt (AR)
+
+A real-world hunt around the house. Hidden paper cards come alive through the phone's camera.
+
+1. Open the game from its **https** link (the GitHub Pages address) on the phone. The camera
+   doesn't work from a file you double-click.
+2. Menu → **🔦 Treasure hunt** → **🖨️ Print cards**. All six cards fit on one A4 page. Cut them out.
+   No printer? Show a card on a laptop or TV screen and that works too.
+3. Hide them: under a cushion, behind a door, next to a picture frame…
+4. Optional: press **● Record clue** on each card and say where it's hidden ("Look under the big table!").
+   The clue for the next card plays when the hunt starts and after each find. 🔊 plays it again.
+5. Pick how many treasures (3–6), press **Start**, and hand the phone over.
+
+When the camera sees a card, its treasure (star, key, wings, candy, heart, gift) pops out on top
+of the paper, the fairy flies around it, the phone buzzes, and the treasure flies into the bag at
+the top. The bottom of the screen always shows a picture of the next card to find, so no reading is
+needed. Cards can be found in any order. Finishing gives the *Treasure Hunter* sticker. Finding
+all six in one hunt gives *Super Seeker*.
+
+How it works: each card has a small QR code (`MAZOOLE:1` … `MAZOOLE:6`) inside a gold picture
+frame. Android Chrome reads QR codes itself (`BarcodeDetector`), so nothing extra loads there.
+Other browsers load the bundled [jsQR](https://github.com/cozmo/jsQR) fallback
+(`js/vendor/jsQR.js`, Apache 2.0) only when the hunt starts.
+
 ## Points, medals and stickers
 
 - **Points:** candy 10 (×combo), star 100, key/button/unlock 25, wings 15. Points pop up where you grab them.
 - **The score sheet** at the end adds a time bonus (10 points for every second under the clock), 50 for each heart left, and 300 if nobody said ouch.
 - **Three medals per maze**, shown on the intro card before you start: ① finish ② collect every star ③ beat the clock. Medals stay earned, so you can go back for the one you missed.
 - **Best scores and medals** show on each level card. The total medal count unlocks the secret level.
-- **Sticker book:** 14 stickers, such as *Untouchable*, *Candy Combo*, *Ghost Buster*, *Ice Skater*, *Portal Hopper* and *Best Friends*. A new sticker pops up the moment you earn it.
+- **Sticker book:** 16 stickers, such as *Untouchable*, *Candy Combo*, *Ghost Buster*, *Ice Skater*, *Portal Hopper*, *Best Friends* and *Treasure Hunter*. A new sticker pops up the moment you earn it.
 
 Everything is saved in the browser you play in.
 
@@ -124,7 +148,7 @@ Paste a copied level into the `MAZOOLE_LEVELS` list and it shows up in the menu.
 
 ## How it's built (for grown-ups)
 
-It's plain HTML, CSS and JavaScript, with no framework, no build step and no dependencies apart from one Google Font. The renderer falls back to Comic Sans if the font doesn't load.
+It's plain HTML, CSS and JavaScript, with no framework, no build step and no dependencies apart from one Google Font (and the jsQR fallback for the treasure hunt, kept in `js/vendor/`). The renderer falls back to Comic Sans if the font doesn't load.
 
 | File | Job |
 |---|---|
@@ -135,6 +159,7 @@ It's plain HTML, CSS and JavaScript, with no framework, no build step and no dep
 | `js/photo.js` | Photo → maze: finds the paper, detects pencil lines with a local-contrast threshold, snaps them to a grid |
 | `js/voices.js` | Records and plays your own sound effects |
 | `js/progress.js` | Medals, best scores and the sticker book |
+| `js/hunt.js` | The treasure hunt: printable cards, camera, QR reading, the treasure popping out on the card, clues |
 | `tools/bundle.py` | Packs everything into one HTML file, for sharing a single file |
 
 Design choices:
