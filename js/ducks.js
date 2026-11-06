@@ -238,6 +238,7 @@
         vel: (12 + Math.random() * 7) * speed, state: "fly", t: 0, face: 1,
       });
     }
+    ar().sfx("flap");
     ar().sfx("quack");
     updateBar();
   }
@@ -309,6 +310,7 @@
       ar().burst(d.sx, d.sy, d.size * 0.4, d.gold ? "#ffd23f" : "#b07a45", 22);
       ar().burst(d.sx, d.sy, d.size * 0.3, "#fff", 10);
       d.pop = { text: "+" + pts, t: 0 };
+      ar().sfx("fall");
       if (d.gold) {
         secret("golden");
         if (window.MazoolePowers) window.MazoolePowers.add("star");
@@ -400,6 +402,7 @@
       d.size = k * (d.gold ? 0.26 : 0.3);
       if (d.sx != null) { const dx = p.x - d.sx; if (Math.abs(dx) > 0.5) d.face = dx > 0 ? 1 : -1; }
       d.sx = p.x; d.sy = p.y;
+      d.pan = p.depth > 0 ? Math.max(-1, Math.min(1, p.dx * 2.5)) : (p.dx < 0 ? -1 : 1); // which ear hears it
       d.vis = p.depth > 0.15 && p.x > -d.size && p.x < W + d.size && p.y > -d.size && p.y < Hh + d.size;
       if (d.state === "fly") {
         const off = Math.acos(Math.max(-1, Math.min(1, p.depth)));
@@ -434,6 +437,16 @@
     c.stroke();
     c.restore();
     $("duck-shoot").classList.toggle("lock", lock);
+    if (lock && !D.lock) ar().sfx("lock");
+    D.lock = lock;
+    // ducks quack now and then, from the side they're on, so you can hear where to turn
+    D.quackT = (D.quackT == null ? 2 : D.quackT) - dt;
+    const flyingNow = D.ducks.filter((d) => d.state === "fly");
+    if (D.quackT <= 0 && flyingNow.length) {
+      D.quackT = 1.6 + Math.random() * 2;
+      const d = flyingNow[Math.floor(Math.random() * flyingNow.length)];
+      ar().sfx("quack", { pan: d.pan, soft: !d.vis });
+    }
 
     // shot flash
     if (D.flash > 0) {

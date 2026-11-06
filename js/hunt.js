@@ -425,7 +425,7 @@
     H.party = { n, t: 0, anchor: anchor || null };
     const p = anchor || H.seen[n];
     burst(p.x, p.y, p.size, TREASURES[n - 1].color, 40);
-    sfx("star");
+    sfx("sparkle");
     if (navigator.vibrate) try { navigator.vibrate([60, 40, 120]); } catch (_) { /* no buzz */ }
     say(`<b>You found ${TREASURES[n - 1].name}!</b>`);
     $("hunt-clue").hidden = true;
@@ -433,9 +433,9 @@
     saveProgress();
   }
 
-  function sfx(name) {
+  function sfx(name, arg) {
     const M = window.Mazoole;
-    if (M && M.sfx) M.sfx(name);
+    if (M && M.sfx) M.sfx(name, arg);
   }
 
   function burst(x, y, size, color, count) {
@@ -490,6 +490,7 @@
   function partyOver() {
     const n = H.party.n;
     H.party = null;
+    sfx("bag");
     buildBag();
     const slot = $("hunt-bag").children[n - 1];
     if (slot) { slot.classList.remove("pop"); void slot.offsetWidth; slot.classList.add("pop"); }
@@ -510,7 +511,7 @@
     stopCamera();
     settings.saved = null;
     saveSettings();
-    sfx("win");
+    sfx("fanfare");
     const PR = window.MazooleProgress, UI = window.Mazoole.UI;
     if (PR) {
       UI.stickers(PR.bump("hunts"));
@@ -619,7 +620,7 @@
   function boo() {
     const g = H.ghost;
     burst(g.sx, g.sy, g.size * 0.4, "#b9a7e8", 18);
-    sfx("portal");
+    sfx("boo");
     window.Mazoole.UI.toast("Boo! The ghost flew away! 👻");
     g.az += 120 + Math.random() * 120;
     g.boo = 1;
@@ -682,12 +683,14 @@
     // keep a treasure in the circle to catch it (tapping works too)
     if (best && !H.party) {
       H.hold += dt;
+      const step = Math.floor(H.hold / 0.15); // rising ticks while you hold it in the circle
+      if (step !== H.holdStep) { H.holdStep = step; sfx("tick", H.hold / HOLD); }
       c.save();
       c.strokeStyle = "#ffc93c"; c.lineWidth = 10; c.lineCap = "round";
       c.beginPath(); c.arc(W / 2, Hh / 2, ring, -Math.PI / 2, -Math.PI / 2 + (Math.PI * 2 * Math.min(1, H.hold / HOLD))); c.stroke();
       c.restore();
       if (H.hold >= HOLD) { H.hold = 0; found(best.it.n, { x: best.it.sx, y: best.it.sy, size: best.it.size }); }
-    } else H.hold = Math.max(0, H.hold - dt * 2);
+    } else { H.hold = Math.max(0, H.hold - dt * 2); H.holdStep = -1; }
 
     // nothing in view: a big arrow shows which way to turn
     if (nearest && !H.party && !H.items.some((it) => it.vis && !H.found.has(it.n))) {
@@ -697,6 +700,9 @@
       ax /= len; ay /= len;
       const reach = k * 0.36 + Math.sin(t * 6) * k * 0.03;
       arrow(c, W / 2 + ax * reach, Hh / 2 + ay * reach, Math.atan2(ay, ax), k * 0.13, t);
+      // a sonar ping from the side to turn to: higher when you're close
+      H.pingT = (H.pingT == null ? 1 : H.pingT) - dt;
+      if (H.pingT <= 0) { H.pingT = 2.5; sfx("ping", { pan: ax * 0.9, near: 1 - nearest.off / Math.PI }); }
       c.save(); c.globalAlpha = 0.9;
       drawTreasure(c, nearest.it.n, W / 2 + ax * (reach - k * 0.17), Hh / 2 + ay * (reach - k * 0.17), k * 0.12, t);
       c.restore();
@@ -764,6 +770,7 @@
         y += Math.sin(e * 5) * size * 0.06;
         if (Math.random() < dt * 8) burst(x + (Math.random() - 0.5) * size, y + (Math.random() - 0.5) * size, size * 0.2, TREASURES[n - 1].color, 1);
       } else {
+        if (!H.party.whoosh) { H.party.whoosh = true; sfx("whoosh"); }
         const k = Math.min(1, (e - SHOW) / FLY), slot = bagSlot(n), ease = k * k * (3 - 2 * k);
         x += (slot.x - x) * ease;
         y += (slot.y - y) * ease - Math.sin(k * Math.PI) * 120;

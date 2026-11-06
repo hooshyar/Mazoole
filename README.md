@@ -149,6 +149,16 @@ faster each wave. Catching ducks in a row doubles and then triples the points.
 It uses the same look-around engine as the magic treasure hunt (camera + motion sensors, or drag to look
 around). Stickers: *Duck Catcher* (10 ducks), *Sharp Eye* (all 10 in one game), *Secret Keeper* (3 secrets).
 
+## 🔊 Sounds
+
+Every game has its own sound effects, made in the browser with WebAudio (no sound files):
+a soft click on buttons; in the mazes a key jingle, door creak, "bonk", fanfare and sad trombone; in
+the treasure hunts a sparkle, whoosh and plop for each treasure, rising ticks while you hold one in the
+circle, a ghostly "boo", and a sonar ping from the **left or right speaker** that tells you which way
+to turn. In Quack Hunt the ducks flap and quack from the side they're on (so you can hear where they
+are), and there's a pop, a falling whistle and a magic chime for secrets. Your own recordings from
+**🎤 Our sounds** still win, and **♪** turns everything off. The sounds live in `js/sounds.js`.
+
 ## Points, medals and stickers
 
 - **Points:** candy 10 (×combo), star 100, key/button/unlock 25, wings 15. Points pop up where you grab them.
@@ -210,6 +220,7 @@ It's plain HTML, CSS and JavaScript, with no framework, no build step and no dep
 | `js/voices.js` | Records and plays your own sound effects |
 | `js/progress.js` | Medals, best scores and the sticker book |
 | `js/hunt.js` | The treasure hunt: printable cards, camera, QR reading, the magic look-around hunt (motion sensors), clues, saved progress |
+| `js/sounds.js` | All the sound effects, synthesized with WebAudio (some panned left/right) |
 | `js/ducks.js` | Quack Hunt: the duck drawing, waves, shooting, records and secrets |
 | `js/powers.js` | The power bag: saves found treasures and shows them as power buttons while playing |
 | `tools/bundle.py` | Packs everything into one HTML file, for sharing a single file |

@@ -215,6 +215,7 @@
   function sfx(name, arg) {
     if (!G.sound) return;
     if (window.MazooleVoices && window.MazooleVoices.play(name)) return;
+    if (window.MazooleSounds && window.MazooleSounds.play(name, arg)) return; // js/sounds.js
     (BEEPS[name] || (() => {}))(arg);
   }
 
@@ -777,6 +778,7 @@
     go() {
       if (G.mode !== "intro") return;
       G.mode = "play";
+      sfx("go");
       UI.show(null);
     },
     showWon(W, r, prog) {
