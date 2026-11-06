@@ -343,6 +343,46 @@ button.rec { background: #ffd6d6; animation: pulse 0.8s infinite alternate; }
 #hud-powers button.power { display: inline-flex; align-items: center; gap: 2px; padding: 0 6px; background: #fff4c2; }
 #hud-powers button.power b { font-size: 16px; }
 
+/* duck game */
+#btn-ducks { background: #d9f2ff; }
+#hunt-play.ducks #hunt-bag { gap: 2px; }
+#hunt-play.ducks #hunt-bag .slot { width: 30px; height: 30px; border-width: 2px; }
+#hunt-play.ducks #hunt-bag .slot canvas { width: 24px !important; height: 24px !important; }
+#hunt-bag .slot.missed { border-color: rgba(229, 72, 77, 0.9); background: rgba(255, 214, 214, 0.6); }
+#duck-bar {
+  position: absolute; left: 12px; right: 12px; bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+  display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; pointer-events: none;
+}
+#duck-bar[hidden] { display: none; }
+#duck-info {
+  display: flex; flex-direction: column; background: var(--paper); border: 3px solid var(--ink);
+  border-radius: 14px 10px 16px 9px; padding: 4px 14px; box-shadow: 3px 4px 0 rgba(0, 0, 0, 0.25); line-height: 1.15;
+}
+#duck-score { font-size: 30px; color: #7a3fd0; font-variant-numeric: tabular-nums; }
+#duck-shells { font-size: 24px; color: #e5484d; letter-spacing: 3px; }
+#duck-wave { font-size: 16px; opacity: 0.75; }
+#duck-shoot {
+  pointer-events: auto; width: 116px; height: 116px; border-radius: 50%; border-width: 4px;
+  background: #ffd84d; font-size: 42px; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1;
+  touch-action: manipulation;
+}
+#duck-shoot span { font-size: 20px; font-weight: bold; }
+#duck-shoot.lock { background: #ff6b6b; animation: pulse 0.35s infinite alternate; }
+#ducks-pic { display: flex; justify-content: center; }
+#ducks-secrets { list-style: none; padding: 0; margin: 4px 0 12px; text-align: left; font-size: 18px; }
+#ducks-secrets li { padding: 3px 8px; border-bottom: 1.5px dashed rgba(0, 0, 0, 0.15); }
+#ducks-secrets li.got { color: #2f8a4a; }
+#ducks-secrets li span { opacity: 0.8; }
+#ducks-done-row { display: flex; justify-content: center; flex-wrap: wrap; gap: 2px; margin: 6px 0; }
+#ducks-done-sheet { max-width: 340px; margin: 0 auto 8px; font-size: 19px; text-align: left; }
+#ducks-done-sheet div { display: flex; justify-content: space-between; border-bottom: 1.5px dashed rgba(0, 0, 0, 0.15); padding: 2px 0; }
+#ducks-done-sheet .total { font-size: 28px; border-bottom: none; }
+#ducks-done-sheet .total b { color: #7a3fd0; }
+#ducks-done-sheet p { margin: 4px 0 !important; font-size: 19px !important; text-align: center; }
+#ducks-done-sheet p.new { color: #d9344f; font-weight: bold; animation: wiggle 0.6s ease-in-out 3; }
+#ducks-done-sheet p.secret { color: #7a3fd0; }
+@media (prefers-reduced-motion: reduce) { #duck-shoot.lock { animation: none; } }
+
 /* printed treasure cards: one picture of all six, sized to fit any page */
 #hunt-print { display: none; }
 @media print {

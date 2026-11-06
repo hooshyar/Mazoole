@@ -22,6 +22,9 @@
     { id: "artist", name: "Little Artist", how: "Play a maze you drew yourself", test: (s) => s.ownPlays >= 1, icon: (c, k) => P.stroke(c, [[k * 0.2, k * 0.8], [k * 0.4, k * 0.3], [k * 0.6, k * 0.7], [k * 0.8, k * 0.2]], P.rng(9), 1, 3, "#e5484d") },
     { id: "hunter", name: "Treasure Hunter", how: "Finish a treasure hunt", test: (s) => s.hunts >= 1, icon: (c, k) => { P.gift(c, k * 0.5, k * 0.58, k * 0.8, P.rng(10), true); P.star(c, k * 0.5, k * 0.2, k * 0.15, P.rng(11)); } },
     { id: "seeker", name: "Super Seeker", how: "Find all 6 cards in one treasure hunt", test: (s) => s.biggestHunt >= 6, icon: (c, k) => { P.key(c, k * 0.42, k * 0.4, k * 0.7, P.rng(12)); P.heart(c, k * 0.62, k * 0.66, k * 0.32, P.rng(13)); } },
+    { id: "ducks", name: "Duck Catcher", how: "Catch 10 ducks in Quack Hunt", test: (s) => s.ducks >= 10, icon: (c, k) => window.MazooleDucks && window.MazooleDucks.duck(c, k * 0.5, k * 0.55, k * 0.95, 0, { face: 1 }) },
+    { id: "sharp", name: "Sharp Eye", how: "Catch all 10 ducks in one game", test: (s) => s.bestDucks >= 10, icon: (c, k) => window.MazooleDucks && window.MazooleDucks.duck(c, k * 0.5, k * 0.55, k * 0.95, 0, { face: -1, gold: true }) },
+    { id: "secrets", name: "Secret Keeper", how: "Find 3 Quack Hunt secrets", test: (s) => s.duckSecrets >= 3, icon: (c, k) => { P.star(c, k * 0.5, k * 0.5, k * 0.4, P.rng(14), "#9b5de5"); P.star(c, k * 0.5, k * 0.5, k * 0.18, P.rng(15), "#fff3a0"); } },
     { id: "master", name: "Medal Master", how: "Collect 20 medals", test: (s) => s.medals >= 20, icon: (c, k) => { P.medal(c, k * 0.33, k * 0.62, k * 0.3, true); P.medal(c, k * 0.67, k * 0.62, k * 0.3, true); } },
   ];
 
@@ -37,7 +40,7 @@
 
   const bits = (m) => (m & 1) + ((m >> 1) & 1) + ((m >> 2) & 1);
   function totals() {
-    const t = Object.assign({ wins: 0, flights: 0, ports: 0, slides: 0, candy: 0, bestCombo: 0, ownPlays: 0, hunts: 0, biggestHunt: 0 }, data.totals);
+    const t = Object.assign({ wins: 0, flights: 0, ports: 0, slides: 0, candy: 0, bestCombo: 0, ownPlays: 0, hunts: 0, biggestHunt: 0, ducks: 0, bestDucks: 0, duckSecrets: 0 }, data.totals);
     t.medals = Object.values(data.levels).reduce((n, l) => n + bits(l.medals || 0), 0);
     return t;
   }

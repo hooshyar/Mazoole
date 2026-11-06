@@ -305,15 +305,17 @@
     H.mode = mode || H.mode;
     const sv = resume ? savedFor(H.mode) : null;
     H.found = new Set(sv ? sv.found : []);
-    if (!sv) { settings.saved = null; saveSettings(); }
+    if (!sv && H.mode !== "ducks") { settings.saved = null; saveSettings(); }
     H.seen = {}; H.party = null; H.sparks = []; H.t = 0; H.noCamera = false;
     H.items = null; H.ghost = null; H.hold = 0; H.R = null; H.sensor = false; H.drag = null; H.dragHinted = false;
     window.Mazoole.G.mode = "hunt";
     UI.show("hunt-play");
-    $("hunt-play").classList.toggle("magic", H.mode === "magic");
-    if (H.mode === "magic") listenMotion(); // must start inside the tap (iPhones ask for permission)
-    buildBag();
-    showClue();
+    $("hunt-play").classList.toggle("magic", H.mode !== "cards"); // look around with the motion sensors
+    $("hunt-play").classList.toggle("ducks", H.mode === "ducks");
+    $("duck-bar").hidden = H.mode !== "ducks";
+    if (H.mode !== "cards") listenMotion(); // must start inside the tap (iPhones ask for permission)
+    if (H.mode === "ducks") { window.MazooleDucks.begin(); $("hunt-clue").hidden = true; }
+    else { buildBag(); showClue(); }
     say("Opening the camera…");
     if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
       try {
@@ -338,8 +340,8 @@
       video.srcObject = H.stream;
       try { await video.play(); } catch (_) { /* autoplay with muted+playsinline normally works */ }
     } else {
-      H.noCamera = true; // magic mode still works on paper
-      UI.toast("No camera, so the treasures hide on paper. Turn the phone or drag to look around!");
+      H.noCamera = true; // the look-around games still work on paper
+      UI.toast("No camera, so everything happens on paper. Turn the phone or drag to look around!");
     }
     if (H.mode === "cards") {
       try { H.read = await makeReader(); } catch (_) {
@@ -352,6 +354,7 @@
     H.last = performance.now();
     requestAnimationFrame(frame);
     if (H.mode === "cards") { scanLoop(); playClue(); }
+    if (H.mode === "ducks") window.MazooleDucks.go();
   }
 
   function problem(html) {
@@ -368,6 +371,7 @@
     if (video) video.srcObject = null;
     if (H.wake) { H.wake.release().catch(() => {}); H.wake = null; }
     window.removeEventListener("deviceorientation", onOrient);
+    if (window.MazooleDucks) window.MazooleDucks.stopped();
   }
   function stop() { stopCamera(); }
 
@@ -464,7 +468,7 @@
 
   function showClue() {
     const n = nextWanted(), box = $("hunt-clue");
-    if (!n) { box.hidden = true; return; }
+    if (!n || H.mode === "ducks") { box.hidden = true; return; }
     box.hidden = false;
     $("hunt-clue-pic").innerHTML = "";
     $("hunt-clue-pic").appendChild(icon(n, 64));
@@ -603,6 +607,7 @@
   }
 
   function tap(x, y) {
+    if (H.mode === "ducks") return window.MazooleDucks.shoot();
     if (H.mode !== "magic" || H.party || !H.items) return;
     for (const it of H.items) {
       if (H.found.has(it.n) || !it.vis) continue;
@@ -725,6 +730,7 @@
     const t = H.t;
 
     if (H.mode === "magic") drawMagic(c, W, Hh, t, dt);
+    else if (H.mode === "ducks") window.MazooleDucks.frame(c, W, Hh, t, dt);
     else drawCards(c, W, Hh, t, now);
 
     // the treasure that was just found: pop, dance, then fly into the bag
@@ -854,7 +860,7 @@
       H.drag.x = e.clientX; H.drag.y = e.clientY;
       if (!H.sensor) {
         H.look.yaw += dx * 0.25; // drag right: the world follows your finger
-        H.look.pitch = Math.max(-60, Math.min(40, H.look.pitch + dy * 0.25));
+        H.look.pitch = Math.max(-85, Math.min(85, H.look.pitch + dy * 0.25));
       }
     });
     const up = (e) => {
@@ -875,5 +881,7 @@
     initPointer();
   });
 
-  window.MazooleHunt = { open: openSetup, start, stop, drawCard, drawSheet, TREASURES, QR, qrDark, rotation, project, _state: H };
+  // the look-around engine, shared with the duck game (js/ducks.js)
+  const ar = { viewMatrix, project, direction, heading, arrow, burst, sfx, state: H };
+  window.MazooleHunt = { open: openSetup, start, stop, drawCard, drawSheet, TREASURES, QR, qrDark, rotation, project, ar, _state: H };
 })();
