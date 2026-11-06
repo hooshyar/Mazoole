@@ -27,12 +27,12 @@
   // The six treasures. `draw` paints one in a 100×100 box centred on (0, 0);
   // callers scale the canvas, so pencil lines grow with the treasure.
   const TREASURES = [
-    { name: "the shiny star", color: "#ffc93c", draw: (c, r) => P.star(c, 0, 0, 40, r) },
-    { name: "the golden key", color: "#f5d33b", draw: (c, r) => P.key(c, 0, 0, 125, r) },
-    { name: "the butterfly wings", color: "#c8a6ff", draw: (c, r, t) => P.wingsShape(c, 0, 0, 120, r, "rgba(200,140,255,0.85)", Math.sin(t * 8) * 0.5) },
-    { name: "the yummy candy", color: "#ff5c7a", draw: (c, r) => P.candy(c, 0, 0, 150, r, 0) },
-    { name: "the big heart", color: "#ff5c7a", draw: (c, r, t) => P.heart(c, 0, 0, 80 * (1 + Math.sin(t * 6) * 0.06), r, "#ff5c7a") },
-    { name: "the surprise gift", color: "#e5484d", draw: (c, r, t, open) => P.gift(c, 0, 5, 120, r, open) },
+    { name: "the shiny star", kind: "star", color: "#ffc93c", draw: (c, r) => P.star(c, 0, 0, 40, r) },
+    { name: "the golden key", kind: "key", color: "#f5d33b", draw: (c, r) => P.key(c, 0, 0, 125, r) },
+    { name: "the butterfly wings", kind: "wings", color: "#c8a6ff", draw: (c, r, t) => P.wingsShape(c, 0, 0, 120, r, "rgba(200,140,255,0.85)", Math.sin(t * 8) * 0.5) },
+    { name: "the yummy candy", kind: "candy", color: "#ff5c7a", draw: (c, r) => P.candy(c, 0, 0, 150, r, 0) },
+    { name: "the big heart", kind: "heart", color: "#ff5c7a", draw: (c, r, t) => P.heart(c, 0, 0, 80 * (1 + Math.sin(t * 6) * 0.06), r, "#ff5c7a") },
+    { name: "the surprise gift", kind: "gift", color: "#e5484d", draw: (c, r, t, open) => P.gift(c, 0, 5, 120, r, open) },
   ];
   const MAX = TREASURES.length;
 
@@ -73,6 +73,22 @@
   }
 
   function buildSetup() {
+    // start / continue buttons for each kind of hunt
+    for (const mode of ["magic", "cards"]) {
+      const box = $("hunt-go-" + mode), sv = savedFor(mode);
+      box.innerHTML = "";
+      const go = document.createElement("button");
+      go.className = "big";
+      go.textContent = sv ? `Continue ▶ (${sv.found.length} of ${settings.count} found)` : mode === "magic" ? "Start the magic hunt ✨" : "Start the card hunt 🔦";
+      go.onclick = () => start(mode, !!sv);
+      box.appendChild(go);
+      if (sv) {
+        const again = document.createElement("button");
+        again.textContent = "Start over";
+        again.onclick = () => start(mode, false);
+        box.appendChild(again);
+      }
+    }
     const pick = $("hunt-count");
     pick.innerHTML = "";
     for (let n = 3; n <= MAX; n++) {
@@ -247,16 +263,35 @@
   }
 
   // ------------------------------------------------------------ the hunt
+  // Two ways to play:
+  //   "cards"  find the printed cards a grown-up hid around the house
+  //   "magic"  no cards: treasures float in the air all around you, and you turn
+  //            around with the phone to find them (motion sensors + camera).
+  //            Good for playing alone.
+  // Every treasure found goes into the power bag (js/powers.js).
   const H = {
-    on: false, stream: null, read: null, wake: null,
-    found: new Set(), seen: {}, party: null, sparks: [], t: 0, last: 0, done: false,
+    on: false, mode: "cards", stream: null, read: null, wake: null, noCamera: false,
+    found: new Set(), seen: {}, party: null, sparks: [], t: 0, last: 0,
+    // magic mode
+    items: null, ghost: null, R: null, sensor: false, look: { yaw: 0, pitch: -10 }, hold: 0, drag: null,
   };
-  const SHOW = 2.6;   // seconds a new treasure dances on its card
+  const SHOW = 2.6;   // seconds a new treasure dances
   const FLY = 0.6;    // seconds it takes to fly into the bag
+  const HOLD = 0.9;   // seconds to keep a treasure in the circle to catch it (magic mode)
 
   function nextWanted() {
     for (let n = 1; n <= settings.count; n++) if (!H.found.has(n)) return n;
     return 0;
+  }
+
+  // A hunt in progress is saved, so it can be continued later
+  function saveProgress() {
+    settings.saved = H.found.size && nextWanted() ? { mode: H.mode, count: settings.count, found: [...H.found] } : null;
+    saveSettings();
+  }
+  function savedFor(mode) {
+    const s = settings.saved;
+    return s && s.mode === mode && s.count === settings.count && s.found && s.found.length ? s : null;
   }
 
   function say(html) {
@@ -265,41 +300,58 @@
     box.hidden = !html;
   }
 
-  async function start() {
+  async function start(mode, resume) {
     const UI = window.Mazoole.UI;
-    H.found = new Set(); H.seen = {}; H.party = null; H.sparks = []; H.done = false; H.t = 0;
+    H.mode = mode || H.mode;
+    const sv = resume ? savedFor(H.mode) : null;
+    H.found = new Set(sv ? sv.found : []);
+    if (!sv) { settings.saved = null; saveSettings(); }
+    H.seen = {}; H.party = null; H.sparks = []; H.t = 0; H.noCamera = false;
+    H.items = null; H.ghost = null; H.hold = 0; H.R = null; H.sensor = false; H.drag = null; H.dragHinted = false;
     window.Mazoole.G.mode = "hunt";
     UI.show("hunt-play");
+    $("hunt-play").classList.toggle("magic", H.mode === "magic");
+    if (H.mode === "magic") listenMotion(); // must start inside the tap (iPhones ask for permission)
     buildBag();
     showClue();
     say("Opening the camera…");
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+      try {
+        H.stream = await navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } },
+        });
+      } catch (e) {
+        H.stream = null;
+        if (H.mode === "cards") {
+          if (e && e.name === "NotAllowedError") return problem("The camera isn't allowed. Tap the icon next to the web address, allow the <b>Camera</b>, and try again.");
+          if (e && (e.name === "NotFoundError" || e.name === "OverconstrainedError")) return problem("This device has no camera we can use.");
+          return problem("The camera didn't start. Close other apps that use the camera and try again.");
+        }
+      }
+    } else if (H.mode === "cards") {
       return problem("The camera only works when the game is opened from its <b>https://</b> web address (the GitHub Pages link), not from a file.");
     }
-    try {
-      H.stream = await navigator.mediaDevices.getUserMedia({
-        audio: false,
-        video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } },
-      });
-    } catch (e) {
-      if (e && e.name === "NotAllowedError") return problem("The camera isn't allowed. Tap the icon next to the web address, allow the <b>Camera</b>, and try again.");
-      if (e && (e.name === "NotFoundError" || e.name === "OverconstrainedError")) return problem("This device has no camera we can use.");
-      return problem("The camera didn't start. Close other apps that use the camera and try again.");
-    }
-    if (window.Mazoole.G.mode !== "hunt") { stop(); return; } // they left while the camera was asking
+    if (window.Mazoole.G.mode !== "hunt" || $("hunt-play").hidden) { stop(); return; } // they left while the camera was asking
     const video = $("hunt-video");
-    video.srcObject = H.stream;
-    try { await video.play(); } catch (_) { /* autoplay with muted+playsinline normally works */ }
-    try { H.read = await makeReader(); } catch (_) {
-      return problem("This browser can't read the treasure cards. Try Chrome.");
+    if (H.stream) {
+      video.srcObject = H.stream;
+      try { await video.play(); } catch (_) { /* autoplay with muted+playsinline normally works */ }
+    } else {
+      H.noCamera = true; // magic mode still works on paper
+      UI.toast("No camera, so the treasures hide on paper. Turn the phone or drag to look around!");
+    }
+    if (H.mode === "cards") {
+      try { H.read = await makeReader(); } catch (_) {
+        return problem("This browser can't read the treasure cards. Try Chrome.");
+      }
     }
     try { H.wake = navigator.wakeLock && await navigator.wakeLock.request("screen"); } catch (_) { /* fine without */ }
     say("");
     H.on = true;
     H.last = performance.now();
     requestAnimationFrame(frame);
-    scanLoop();
-    playClue();
+    if (H.mode === "cards") { scanLoop(); playClue(); }
   }
 
   function problem(html) {
@@ -315,9 +367,11 @@
     const video = $("hunt-video");
     if (video) video.srcObject = null;
     if (H.wake) { H.wake.release().catch(() => {}); H.wake = null; }
+    window.removeEventListener("deviceorientation", onOrient);
   }
   function stop() { stopCamera(); }
 
+  // ------------------------------------------------------------ card mode: reading the cards
   async function scanLoop() {
     const video = $("hunt-video");
     while (H.on) {
@@ -361,15 +415,18 @@
     else if (fresh && !(H.party && H.party.n === n)) window.Mazoole.UI.toast("You already found this one! ✓");
   }
 
-  function found(n) {
+  // ------------------------------------------------------------ finding a treasure (both modes)
+  function found(n, anchor) {
     H.found.add(n);
-    H.party = { n, t: 0 };
-    const p = H.seen[n];
+    H.party = { n, t: 0, anchor: anchor || null };
+    const p = anchor || H.seen[n];
     burst(p.x, p.y, p.size, TREASURES[n - 1].color, 40);
     sfx("star");
     if (navigator.vibrate) try { navigator.vibrate([60, 40, 120]); } catch (_) { /* no buzz */ }
     say(`<b>You found ${TREASURES[n - 1].name}!</b>`);
     $("hunt-clue").hidden = true;
+    if (window.MazoolePowers) window.MazoolePowers.add(TREASURES[n - 1].kind);
+    saveProgress();
   }
 
   function sfx(name) {
@@ -411,13 +468,19 @@
     box.hidden = false;
     $("hunt-clue-pic").innerHTML = "";
     $("hunt-clue-pic").appendChild(icon(n, 64));
+    if (H.mode === "magic") {
+      const left = settings.count - H.found.size;
+      $("hunt-clue-text").innerHTML = `<b>Look all around you!</b><span>${left} treasure${left > 1 ? "s" : ""} hiding. ${H.sensor || H.t < 1.5 ? "Turn slowly with the phone 🔄" : "Drag the screen to look around 👆"}</span>`;
+      $("hunt-hear").hidden = true;
+      return;
+    }
     $("hunt-clue-text").innerHTML = `<b>Find card ${n}</b><span>${TREASURES[n - 1].name}</span>`;
     $("hunt-hear").hidden = !hasClue(n);
   }
 
   function playClue() {
     const n = nextWanted();
-    if (n && hasClue(n)) window.MazooleVoices.play(CLUE(n));
+    if (H.mode === "cards" && n && hasClue(n)) window.MazooleVoices.play(CLUE(n));
   }
 
   function partyOver() {
@@ -428,25 +491,28 @@
     if (slot) { slot.classList.remove("pop"); void slot.offsetWidth; slot.classList.add("pop"); }
     say("");
     if (!nextWanted()) return finish();
-    // another card already in view? It counts right away.
-    const now = performance.now();
-    for (let m = 1; m <= settings.count; m++) {
-      if (!H.found.has(m) && H.seen[m] && now - H.seen[m].at < 700) return found(m);
+    if (H.mode === "cards") {
+      // another card already in view? It counts right away.
+      const now = performance.now();
+      for (let m = 1; m <= settings.count; m++) {
+        if (!H.found.has(m) && H.seen[m] && now - H.seen[m].at < 700) return found(m);
+      }
     }
     showClue();
     playClue();
   }
 
   function finish() {
-    H.done = true;
     stopCamera();
+    settings.saved = null;
+    saveSettings();
     sfx("win");
     const PR = window.MazooleProgress, UI = window.Mazoole.UI;
     if (PR) {
       UI.stickers(PR.bump("hunts"));
       UI.stickers(PR.best("biggestHunt", settings.count));
     }
-    $("hunt-done-text").textContent = `You found all ${settings.count} treasures!`;
+    $("hunt-done-text").innerHTML = `You found all ${settings.count} treasures!<br><small>They're saved in your 🎒 power bag. Tap them while you play a maze!</small>`;
     const row = $("hunt-done-row");
     row.innerHTML = "";
     for (let n = 1; n <= settings.count; n++) row.appendChild(icon(n, 46));
@@ -475,6 +541,174 @@
     requestAnimationFrame(tick);
   }
 
+  // ------------------------------------------------------------ magic mode: looking around
+  // The phone's motion sensors tell us which way the camera points. Treasures sit
+  // at fixed directions around the player, so they stay put as she turns.
+  const RAD = Math.PI / 180;
+  function onOrient(e) {
+    if (e.alpha == null && e.beta == null) return;
+    if (!H.sensor) { H.sensor = true; showClue(); }
+    H.R = rotation(e.alpha || 0, e.beta || 0, e.gamma || 0);
+  }
+  function listenMotion() {
+    window.removeEventListener("deviceorientation", onOrient);
+    // Always listen; some browsers (iPhone, newer Chrome) also want permission asked
+    // during the tap. Events simply start arriving once it's granted.
+    window.addEventListener("deviceorientation", onOrient);
+    const D = window.DeviceOrientationEvent;
+    if (D && typeof D.requestPermission === "function") {
+      try { D.requestPermission().catch(() => {}); } catch (_) { /* not allowed here */ }
+    }
+  }
+  // Device → world rotation for the sensor angles (W3C DeviceOrientation: Z-X'-Y''), row-major
+  function rotation(a, b, g) {
+    const cA = Math.cos(a * RAD), sA = Math.sin(a * RAD), cB = Math.cos(b * RAD), sB = Math.sin(b * RAD), cG = Math.cos(g * RAD), sG = Math.sin(g * RAD);
+    return [
+      cA * cG - sA * sB * sG, -sA * cB, cA * sG + sA * sB * cG,
+      sA * cG + cA * sB * sG, cA * cB, sA * sG - cA * sB * cG,
+      -cB * sG, sB, cB * cG,
+    ];
+  }
+  // Without motion sensors (or before they answer) you look around by dragging
+  function viewMatrix() {
+    if (H.sensor && H.R) return H.R;
+    return rotation(H.look.yaw, 90 + H.look.pitch, 0);
+  }
+  const heading = (R) => Math.atan2(-R[2], -R[5]) / RAD; // compass angle of the camera's view
+  const direction = (az, el) => [Math.sin(az * RAD) * Math.cos(el * RAD), Math.cos(az * RAD) * Math.cos(el * RAD), Math.sin(el * RAD)];
+
+  // A world direction → screen position. `depth` <= 0 means it's behind you.
+  function project(R, d, W, Hh) {
+    const vx = R[0] * d[0] + R[3] * d[1] + R[6] * d[2];
+    const vy = R[1] * d[0] + R[4] * d[1] + R[7] * d[2];
+    const vz = R[2] * d[0] + R[5] * d[1] + R[8] * d[2];
+    const ang = ((screen.orientation && screen.orientation.angle) || window.orientation || 0) * RAD;
+    const x = H.sensor ? vx * Math.cos(ang) - vy * Math.sin(ang) : vx;
+    const y = H.sensor ? vx * Math.sin(ang) + vy * Math.cos(ang) : vy;
+    const f = Math.max(W, Hh) / 2 / Math.tan(33 * RAD); // about a phone camera's field of view
+    const depth = -vz;
+    return { x: W / 2 + (f * x) / Math.max(depth, 0.001), y: Hh / 2 - (f * y) / Math.max(depth, 0.001), depth, dx: x, dy: y };
+  }
+
+  // Hide the treasures all around, starting with one just to the right
+  function placeItems(R) {
+    const h0 = heading(R);
+    const ns = [];
+    for (let n = 1; n <= settings.count; n++) if (!H.found.has(n)) ns.push(n);
+    const step = 360 / Math.max(1, ns.length);
+    H.items = ns.map((n, i) => ({
+      n, az: h0 + 28 + i * step + (i ? (Math.random() - 0.5) * step * 0.5 : 0), el: -26 + Math.random() * 30, bob: Math.random() * 6,
+    }));
+    H.ghost = { az: h0 + 180 + (Math.random() - 0.5) * 60, el: 2, t: 0, boo: 0 };
+  }
+
+  function tap(x, y) {
+    if (H.mode !== "magic" || H.party || !H.items) return;
+    for (const it of H.items) {
+      if (H.found.has(it.n) || !it.vis) continue;
+      if (Math.hypot(x - it.sx, y - it.sy) < it.size * 0.7) return found(it.n, { x: it.sx, y: it.sy, size: it.size });
+    }
+    const g = H.ghost;
+    if (g && g.vis && Math.hypot(x - g.sx, y - g.sy) < g.size * 0.6) boo();
+  }
+  function boo() {
+    const g = H.ghost;
+    burst(g.sx, g.sy, g.size * 0.4, "#b9a7e8", 18);
+    sfx("portal");
+    window.Mazoole.UI.toast("Boo! The ghost flew away! 👻");
+    g.az += 120 + Math.random() * 120;
+    g.boo = 1;
+  }
+
+  function drawMagic(c, W, Hh, t, dt) {
+    const R = viewMatrix();
+    if (!H.items) placeItems(R);
+    if (!H.sensor && H.t > 1.5 && !H.dragHinted) { H.dragHinted = true; showClue(); }
+    const k = Math.min(W, Hh);
+    if (H.noCamera) { // notebook paper instead of the camera
+      P.paper(c, W, Hh, k * 0.16);
+    }
+    // the catching circle in the middle
+    const ring = k * 0.2;
+    c.save();
+    c.setLineDash([10, 10]);
+    c.strokeStyle = "rgba(255,255,255,0.85)"; c.lineWidth = 4;
+    if (H.noCamera) c.strokeStyle = "rgba(46,46,51,0.5)";
+    c.beginPath(); c.arc(W / 2, Hh / 2, ring, 0, Math.PI * 2); c.stroke();
+    c.restore();
+
+    // the ghost drifts around; tap it and it flies off
+    const g = H.ghost;
+    g.t += dt; g.az += Math.sin(g.t * 0.4) * dt * 14; g.boo = Math.max(0, g.boo - dt);
+    const gp = project(R, direction(g.az, g.el + Math.sin(g.t * 1.3) * 4), W, Hh);
+    g.size = k * 0.3; g.sx = gp.x; g.sy = gp.y;
+    g.vis = gp.depth > 0.2 && gp.x > -g.size && gp.x < W + g.size && gp.y > -g.size && gp.y < Hh + g.size;
+    if (g.vis) { c.save(); c.globalAlpha = 0.85; P.ghost(c, gp.x, gp.y, g.size, t, 5, g.boo > 0); c.restore(); }
+
+    // the treasures
+    let best = null, nearest = null;
+    for (const it of H.items) {
+      if (H.found.has(it.n)) continue;
+      const d = direction(it.az, it.el);
+      const p = project(R, d, W, Hh);
+      it.size = k * 0.26;
+      const bob = Math.sin(t * 2.5 + it.bob) * it.size * 0.08;
+      // smooth out sensor jitter
+      if (it.sx == null || !it.vis) { it.sx = p.x; it.sy = p.y + bob; }
+      else { it.sx += (p.x - it.sx) * Math.min(1, dt * 18); it.sy += (p.y + bob - it.sy) * Math.min(1, dt * 18); }
+      it.vis = p.depth > 0.2 && p.x > -it.size / 2 && p.x < W + it.size / 2 && p.y > -it.size / 2 && p.y < Hh + it.size / 2;
+      const off = Math.acos(Math.max(-1, Math.min(1, p.depth))); // how far from where the camera points
+      if (!nearest || off < nearest.off) nearest = { it, off, p };
+      if (!it.vis) continue;
+      // shadow, glow, treasure
+      c.save();
+      c.fillStyle = "rgba(0,0,0,0.22)";
+      c.beginPath(); c.ellipse(it.sx, it.sy + it.size * 0.62, it.size * 0.36, it.size * 0.09, 0, 0, Math.PI * 2); c.fill();
+      const gl = c.createRadialGradient(it.sx, it.sy, 0, it.sx, it.sy, it.size * 0.8);
+      gl.addColorStop(0, "rgba(255,247,190,0.8)"); gl.addColorStop(1, "rgba(255,247,190,0)");
+      c.fillStyle = gl; c.beginPath(); c.arc(it.sx, it.sy, it.size * 0.8, 0, Math.PI * 2); c.fill();
+      c.restore();
+      drawTreasure(c, it.n, it.sx, it.sy, it.size, t);
+      if (Math.random() < dt * 4) burst(it.sx + (Math.random() - 0.5) * it.size, it.sy + (Math.random() - 0.5) * it.size, 10, TREASURES[it.n - 1].color, 1);
+      const dc = Math.hypot(it.sx - W / 2, it.sy - Hh / 2);
+      if (dc < ring && (!best || dc < best.dc)) best = { it, dc };
+    }
+
+    // keep a treasure in the circle to catch it (tapping works too)
+    if (best && !H.party) {
+      H.hold += dt;
+      c.save();
+      c.strokeStyle = "#ffc93c"; c.lineWidth = 10; c.lineCap = "round";
+      c.beginPath(); c.arc(W / 2, Hh / 2, ring, -Math.PI / 2, -Math.PI / 2 + (Math.PI * 2 * Math.min(1, H.hold / HOLD))); c.stroke();
+      c.restore();
+      if (H.hold >= HOLD) { H.hold = 0; found(best.it.n, { x: best.it.sx, y: best.it.sy, size: best.it.size }); }
+    } else H.hold = Math.max(0, H.hold - dt * 2);
+
+    // nothing in view: a big arrow shows which way to turn
+    if (nearest && !H.party && !H.items.some((it) => it.vis && !H.found.has(it.n))) {
+      let ax = nearest.p.dx, ay = -nearest.p.dy;
+      if (nearest.p.depth < 0.3 && Math.abs(ax) < 0.2) ax = ax < 0 ? -1 : 1; // right behind you: turn
+      const len = Math.hypot(ax, ay) || 1;
+      ax /= len; ay /= len;
+      const reach = k * 0.36 + Math.sin(t * 6) * k * 0.03;
+      arrow(c, W / 2 + ax * reach, Hh / 2 + ay * reach, Math.atan2(ay, ax), k * 0.13, t);
+      c.save(); c.globalAlpha = 0.9;
+      drawTreasure(c, nearest.it.n, W / 2 + ax * (reach - k * 0.17), Hh / 2 + ay * (reach - k * 0.17), k * 0.12, t);
+      c.restore();
+    }
+  }
+
+  function arrow(c, x, y, ang, s, t) {
+    const r = P.rng(P.hash(Math.floor(t * 6), 7, 41));
+    c.save();
+    c.translate(x, y); c.rotate(ang);
+    c.beginPath();
+    c.moveTo(s, 0); c.lineTo(0, -s * 0.7); c.lineTo(0, -s * 0.3); c.lineTo(-s, -s * 0.3); c.lineTo(-s, s * 0.3); c.lineTo(0, s * 0.3); c.lineTo(0, s * 0.7); c.closePath();
+    c.fillStyle = "#ffd84d"; c.fill();
+    P.stroke(c, [[s, 0], [0, -s * 0.7], [0, -s * 0.3], [-s, -s * 0.3], [-s, s * 0.3], [0, s * 0.3], [0, s * 0.7], [s, 0]], r, s * 0.06, 4, P.INK);
+    c.restore();
+  }
+
   // ------------------------------------------------------------ drawing on top of the camera
   function frame(now) {
     if (!H.on) return;
@@ -490,55 +724,36 @@
     c.clearRect(0, 0, W, Hh);
     const t = H.t;
 
-    // aiming frame in the middle while nothing is in view
-    const anyInView = Object.values(H.seen).some((s) => now - s.at < 600);
-    if (!anyInView && !H.party) {
-      const k = Math.min(W, Hh) * 0.55, bob = Math.sin(t * 3) * 6;
-      const r = P.rng(P.hash(Math.floor(t * 3), 1, 31));
-      c.save();
-      c.setLineDash([14, 12]);
-      P.stroke(c, [[W / 2 - k / 2, Hh / 2 - k / 2], [W / 2 + k / 2, Hh / 2 - k / 2], [W / 2 + k / 2, Hh / 2 + k / 2], [W / 2 - k / 2, Hh / 2 + k / 2], [W / 2 - k / 2, Hh / 2 - k / 2]], r, 3, 4, "#fff", 0.8);
-      c.restore();
-      P.fairy(c, W / 2 + k / 2 - 10, Hh / 2 - k / 2 - 30 + bob, 90, t, { flying: true, facing: -1 });
-    }
-
-    // cards in view
-    for (const key of Object.keys(H.seen)) {
-      const n = +key, s = H.seen[n], age = now - s.at;
-      if (age > 900 && !(H.party && H.party.n === n)) continue;
-      const fade = Math.max(0, Math.min(1, 1 - (age - 400) / 500));
-      if (H.party && H.party.n === n) continue; // drawn below
-      if (H.found.has(n)) {
-        c.save(); c.globalAlpha = 0.85 * fade;
-        drawTreasure(c, n, s.x, s.y - s.size * 0.75, s.size * 0.6, t);
-        bubble(c, s.x + s.size * 0.4, s.y - s.size * 1.0, s.size * 0.18, "✓", "#2fae62");
-        c.restore();
-      } else if (n > settings.count) {
-        c.save(); c.globalAlpha = 0.7 * fade;
-        bubble(c, s.x, s.y, s.size * 0.25, "?", "#9b5de5");
-        c.restore();
-      }
-    }
+    if (H.mode === "magic") drawMagic(c, W, Hh, t, dt);
+    else drawCards(c, W, Hh, t, now);
 
     // the treasure that was just found: pop, dance, then fly into the bag
     if (H.party) {
       const n = H.party.n;
       H.party.t += dt;
       const e = H.party.t;
-      const s = H.seen[n];
-      const live = now - s.at < 700;
-      // stay on the card while it's in view; otherwise drift to the middle of the screen
-      const target = live ? { x: s.x, y: s.y - s.size * 0.9, size: Math.max(120, s.size * 1.1) } : { x: W / 2, y: Hh * 0.45, size: Math.min(W, Hh) * 0.4 };
+      let target, base;
+      if (H.party.anchor) {
+        const an = H.party.anchor;
+        target = { x: an.x, y: an.y, size: Math.max(120, an.size * 1.2) };
+        base = an.y;
+      } else {
+        const s = H.seen[n];
+        const live = now - s.at < 700;
+        // stay on the card while it's in view; otherwise drift to the middle of the screen
+        target = live ? { x: s.x, y: s.y - s.size * 0.9, size: Math.max(120, s.size * 1.1) } : { x: W / 2, y: Hh * 0.45, size: Math.min(W, Hh) * 0.4 };
+        base = s.y;
+      }
       const a = H.party.at || (H.party.at = { ...target });
       a.x += (target.x - a.x) * Math.min(1, dt * 8);
       a.y += (target.y - a.y) * Math.min(1, dt * 8);
       a.size += (target.size - a.size) * Math.min(1, dt * 8);
       let x = a.x, y = a.y, size = a.size;
       if (e < 0.6) {
-        // springy pop out of the card
+        // springy pop
         const k = e / 0.6;
         size *= 1 + Math.sin(k * Math.PI) * 0.35 - (1 - k) * 0.9;
-        y = s.y + (y - s.y) * k;
+        y = base + (y - base) * k;
       } else if (e < SHOW) {
         y += Math.sin(e * 5) * size * 0.06;
         if (Math.random() < dt * 8) burst(x + (Math.random() - 0.5) * size, y + (Math.random() - 0.5) * size, size * 0.2, TREASURES[n - 1].color, 1);
@@ -579,7 +794,37 @@
     }
     H.sparks = H.sparks.filter((p) => p.life > 0);
 
-    requestAnimationFrame(frame);
+    if (H.on) requestAnimationFrame(frame);
+  }
+
+  function drawCards(c, W, Hh, t, now) {
+    // aiming frame in the middle while nothing is in view
+    const anyInView = Object.values(H.seen).some((s) => now - s.at < 600);
+    if (!anyInView && !H.party) {
+      const k = Math.min(W, Hh) * 0.55, bob = Math.sin(t * 3) * 6;
+      const r = P.rng(P.hash(Math.floor(t * 3), 1, 31));
+      c.save();
+      c.setLineDash([14, 12]);
+      P.stroke(c, [[W / 2 - k / 2, Hh / 2 - k / 2], [W / 2 + k / 2, Hh / 2 - k / 2], [W / 2 + k / 2, Hh / 2 + k / 2], [W / 2 - k / 2, Hh / 2 + k / 2], [W / 2 - k / 2, Hh / 2 - k / 2]], r, 3, 4, "#fff", 0.8);
+      c.restore();
+      P.fairy(c, W / 2 + k / 2 - 10, Hh / 2 - k / 2 - 30 + bob, 90, t, { flying: true, facing: -1 });
+    }
+    // cards in view
+    for (const key of Object.keys(H.seen)) {
+      const n = +key, s = H.seen[n], age = now - s.at;
+      if (age > 900 || (H.party && H.party.n === n)) continue;
+      const fade = Math.max(0, Math.min(1, 1 - (age - 400) / 500));
+      if (H.found.has(n)) {
+        c.save(); c.globalAlpha = 0.85 * fade;
+        drawTreasure(c, n, s.x, s.y - s.size * 0.75, s.size * 0.6, t);
+        bubble(c, s.x + s.size * 0.4, s.y - s.size * 1.0, s.size * 0.18, "✓", "#2fae62");
+        c.restore();
+      } else if (n > settings.count) {
+        c.save(); c.globalAlpha = 0.7 * fade;
+        bubble(c, s.x, s.y, s.size * 0.25, "?", "#9b5de5");
+        c.restore();
+      }
+    }
   }
 
   function bubble(c, x, y, rad, text, color) {
@@ -595,15 +840,40 @@
     c.restore();
   }
 
+  // taps and drags on the magic screen
+  function initPointer() {
+    const cv = $("hunt-canvas");
+    cv.addEventListener("pointerdown", (e) => {
+      H.drag = { x: e.clientX, y: e.clientY, moved: 0 };
+      try { cv.setPointerCapture(e.pointerId); } catch (_) { /* fine */ }
+    });
+    cv.addEventListener("pointermove", (e) => {
+      if (!H.drag) return;
+      const dx = e.clientX - H.drag.x, dy = e.clientY - H.drag.y;
+      H.drag.moved += Math.abs(dx) + Math.abs(dy);
+      H.drag.x = e.clientX; H.drag.y = e.clientY;
+      if (!H.sensor) {
+        H.look.yaw += dx * 0.25; // drag right: the world follows your finger
+        H.look.pitch = Math.max(-60, Math.min(40, H.look.pitch + dy * 0.25));
+      }
+    });
+    const up = (e) => {
+      if (H.drag && H.drag.moved < 12) tap(e.clientX, e.clientY);
+      H.drag = null;
+    };
+    cv.addEventListener("pointerup", up);
+    cv.addEventListener("pointercancel", () => (H.drag = null));
+  }
+
   window.addEventListener("DOMContentLoaded", () => {
     $("btn-hunt").onclick = openSetup;
     $("hunt-print-btn").onclick = printCards;
-    $("hunt-start").onclick = start;
-    $("hunt-again").onclick = start;
+    $("hunt-again").onclick = () => start(H.mode);
     $("hunt-exit").onclick = () => { stop(); window.Mazoole.UI.menu(); };
     $("hunt-hear").onclick = playClue;
     $("hunt-setup").onclick = openSetup;
+    initPointer();
   });
 
-  window.MazooleHunt = { open: openSetup, start, stop, drawCard, drawSheet, TREASURES, QR, qrDark, _state: H };
+  window.MazooleHunt = { open: openSetup, start, stop, drawCard, drawSheet, TREASURES, QR, qrDark, rotation, project, _state: H };
 })();

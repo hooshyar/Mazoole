@@ -77,27 +77,53 @@ The newer levels each show off one idea:
 
 ## 🔦 Treasure hunt (AR)
 
-A real-world hunt around the house. Hidden paper cards come alive through the phone's camera.
+Open the game from its **https** link (the GitHub Pages address) on a phone, then Menu → **🔦 Treasure hunt**.
+The camera doesn't work from a file you double-click. Choose how many treasures (3–6) and one of two hunts:
 
-1. Open the game from its **https** link (the GitHub Pages address) on the phone. The camera
-   doesn't work from a file you double-click.
-2. Menu → **🔦 Treasure hunt** → **🖨️ Print cards**. All six cards fit on one A4 page. Cut them out.
+### ✨ Magic hunt: play alone, no cards
+
+Treasures hide in the air all around you. Hold the phone up and turn around slowly: the camera
+shows the room and the treasures float in it, each in its own spot. A big yellow arrow points to the
+nearest one. Turn until it floats into the dashed circle and hold it there for a moment, or just tap
+it. A cheeky ghost drifts around too. Tap it and it flies away.
+
+It uses the phone's motion sensors to know where you're pointing. Without them (on a laptop, for example)
+you drag the screen to look around, and without a camera the treasures hide on notebook paper.
+
+### 🗺️ Card hunt: a grown-up hides real cards
+
+1. **🖨️ Print cards**: all six fit on one page (A4 or Letter), whatever margins the phone adds. Cut them out.
    No printer? Show a card on a laptop or TV screen and that works too.
-3. Hide them: under a cushion, behind a door, next to a picture frame…
-4. Optional: press **● Record clue** on each card and say where it's hidden ("Look under the big table!").
+2. Hide them: under a cushion, behind a door, next to a picture frame…
+3. Optional: under **🎤 Record a clue**, say where each card is hidden ("Look under the big table!").
    The clue for the next card plays when the hunt starts and after each find. 🔊 plays it again.
-5. Pick how many treasures (3–6), press **Start**, and hand the phone over.
+4. Press **Start the card hunt** and hand the phone over.
 
-When the camera sees a card, its treasure (star, key, wings, candy, heart, gift) pops out on top
-of the paper, the fairy flies around it, the phone buzzes, and the treasure flies into the bag at
-the top. The bottom of the screen always shows a picture of the next card to find, so no reading is
-needed. Cards can be found in any order. Finishing gives the *Treasure Hunter* sticker. Finding
-all six in one hunt gives *Super Seeker*.
+When the camera sees a card, its treasure pops out on top of the paper, the fairy flies around it,
+the phone buzzes, and the treasure flies into the bag at the top. The bottom of the screen shows a
+picture of the next card, so no reading is needed. Cards can be found in any order.
 
 How it works: each card has a small QR code (`MAZOOLE:1` … `MAZOOLE:6`) inside a gold picture
 frame. Android Chrome reads QR codes itself (`BarcodeDetector`), so nothing extra loads there.
 Other browsers load the bundled [jsQR](https://github.com/cozmo/jsQR) fallback
-(`js/vendor/jsQR.js`, Apache 2.0) only when the hunt starts.
+(`js/vendor/jsQR.js`, Apache 2.0) only when a card hunt starts.
+
+### Saved progress and the 🎒 power bag
+
+- A hunt you stop halfway is saved. The setup screen then offers **Continue (2 of 4 found)**.
+- Every treasure found (in either hunt) goes into the **power bag**, shown in the menu. While playing a
+  maze, the powers sit at the top of the screen. Tap one to use it:
+
+| Power | What it does |
+|---|---|
+| ⭐ Star | Nothing can hurt you for 7 seconds (you glow gold) |
+| 🔑 Key | An extra key for a lock door |
+| 🦋 Wings | Fly over walls for 6 seconds |
+| 🍬 Candy | 50 points |
+| ❤️ Heart | One more heart (up to 7) |
+| 🎁 Magic gift | Opens every colored door |
+
+Finishing a hunt gives the *Treasure Hunter* sticker. Finding all six in one hunt gives *Super Seeker*.
 
 ## Points, medals and stickers
 
@@ -159,7 +185,8 @@ It's plain HTML, CSS and JavaScript, with no framework, no build step and no dep
 | `js/photo.js` | Photo → maze: finds the paper, detects pencil lines with a local-contrast threshold, snaps them to a grid |
 | `js/voices.js` | Records and plays your own sound effects |
 | `js/progress.js` | Medals, best scores and the sticker book |
-| `js/hunt.js` | The treasure hunt: printable cards, camera, QR reading, the treasure popping out on the card, clues |
+| `js/hunt.js` | The treasure hunt: printable cards, camera, QR reading, the magic look-around hunt (motion sensors), clues, saved progress |
+| `js/powers.js` | The power bag: saves found treasures and shows them as power buttons while playing |
 | `tools/bundle.py` | Packs everything into one HTML file, for sharing a single file |
 
 Design choices:

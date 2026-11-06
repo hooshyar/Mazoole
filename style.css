@@ -322,6 +322,27 @@ button.rec { background: #ffd6d6; animation: pulse 0.8s infinite alternate; }
 #hunt-done-row { display: flex; justify-content: center; gap: 6px; margin: 0 0 10px; }
 @media (prefers-reduced-motion: reduce) { #hunt-clue-pic canvas, #hunt-bag .slot.pop { animation: none; } }
 
+/* hunt setup: two kinds of hunt */
+.hunt-modes { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; margin: 6px 0 4px; text-align: left; }
+.hunt-mode { border: 2px solid var(--ink); border-radius: 14px 10px 16px 9px; padding: 8px 14px 10px; background: #fff; }
+.hunt-mode.magic { background: #f3e9ff; }
+.hunt-mode.cards { background: #fff8e0; }
+.hunt-mode h3 { margin: 2px 0; font-size: 28px; }
+.hunt-mode p { font-size: 19px; margin: 4px 0 8px; }
+.hunt-mode .hunt-steps { font-size: 18px; padding-left: 22px; }
+.hunt-go { text-align: center; }
+.hunt-clues summary { cursor: pointer; font-size: 18px; margin: 4px 0; }
+#hunt-play.magic #hunt-canvas { pointer-events: auto; touch-action: none; }
+#hunt-done-text small { font-size: 17px; opacity: 0.8; }
+
+/* the power bag: in the menu and as buttons while playing */
+.power-line { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 8px; margin: 0 0 6px !important; font-size: 20px; }
+.power-line[hidden], #hud-powers[hidden] { display: none !important; }
+.power-line span { display: inline-flex; align-items: center; gap: 2px; }
+#hud-powers { gap: 4px; }
+#hud-powers button.power { display: inline-flex; align-items: center; gap: 2px; padding: 0 6px; background: #fff4c2; }
+#hud-powers button.power b { font-size: 16px; }
+
 /* printed treasure cards: one picture of all six, sized to fit any page */
 #hunt-print { display: none; }
 @media print {
