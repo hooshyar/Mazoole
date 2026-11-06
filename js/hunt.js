@@ -113,56 +113,101 @@
   }
 
   // ------------------------------------------------------------ printable cards
-  // One card is drawn on a canvas at 100 px per cm: 9 cm × 8.6 cm.
-  function drawCard(n) {
-    const W = 900, H = 860;
-    const c = document.createElement("canvas");
-    c.width = W; c.height = H;
-    const x = c.getContext("2d");
+  // All six cards are drawn onto ONE sheet picture (2 across, 3 down) and printed
+  // 180 mm wide, so it is 229 mm tall: that fits A4 or Letter whatever margins,
+  // headers and footers the browser adds (iPhone Safari adds quite a lot).
+  const CARD_W = 900, CARD_H = 765;
+  const CARD_BG = ["#fff1b8", "#ffe0ec", "#e6dcff", "#d9f2ff", "#ffe2d6", "#dff5e1"];
+
+  function drawCard(n, x, ox, oy) {
+    const W = CARD_W, H = CARD_H;
+    if (!x) {
+      const c = document.createElement("canvas");
+      c.width = W; c.height = H;
+      drawCard(n, c.getContext("2d"), 0, 0);
+      return c;
+    }
     const r = P.rng(P.hash(n, 5, 77));
-    x.fillStyle = "#fff";
-    x.fillRect(0, 0, W, H);
-    // the QR code with a wide white margin (cameras need it), inside a gold
-    // picture frame like the round ones on the living-room wall
-    const mod = 19, quiet = 3 * mod, box = QR_SIZE * mod + 2 * quiet;
-    const bx = (W - box) / 2, by = 50;
     const color = P.PORTAL_COLORS[(n - 1) % P.PORTAL_COLORS.length];
-    for (const [pad, width, col] of [[16, 20, "#d9a82e"], [4, 5, P.INK], [30, 4, P.INK]]) {
+    x.save();
+    x.translate(ox, oy);
+    x.beginPath(); x.rect(0, 0, W, H); x.clip();
+    // crayon background with sprinkled stars and dots
+    x.fillStyle = CARD_BG[(n - 1) % CARD_BG.length];
+    x.fillRect(0, 0, W, H);
+    x.globalAlpha = 0.18;
+    x.strokeStyle = color; x.lineWidth = 9;
+    x.beginPath();
+    for (let i = -H; i < W; i += 38) { x.moveTo(i + (r() - 0.5) * 8, 0); x.lineTo(i + H * 0.55 + (r() - 0.5) * 8, H); }
+    x.stroke();
+    x.globalAlpha = 1;
+    for (let i = 0; i < 16; i++) {
+      const sx = r() * W, sy = r() * H;
+      if (sx > 150 && sx < W - 150 && sy < 600) continue; // keep the code area clean
+      if (i % 2) P.star(x, sx, sy, 10 + r() * 10, r, ["#ffc93c", "#ff8fc1", "#3e7bfa", "#2fae62"][i % 4]);
+      else { x.fillStyle = color; x.globalAlpha = 0.5; x.beginPath(); x.arc(sx, sy, 5 + r() * 6, 0, Math.PI * 2); x.fill(); x.globalAlpha = 1; }
+    }
+    // the code in a white box (cameras need the white margin) inside a gold picture frame
+    const mod = 19, quiet = 3 * mod, box = QR_SIZE * mod + 2 * quiet;
+    const bx = (W - box) / 2, by = 36;
+    x.fillStyle = "#fff";
+    x.fillRect(bx - 4, by - 4, box + 8, box + 8);
+    for (const [pad, width, col, alpha] of [[16, 22, "#d9a82e", 0.95], [4, 5, P.INK, 0.85], [29, 4, P.INK, 0.85]]) {
       const pts = [[bx - pad, by - pad], [bx + box + pad, by - pad], [bx + box + pad, by + box + pad], [bx - pad, by + box + pad], [bx - pad, by - pad]];
-      P.stroke(x, pts, r, 5, width, col, col === P.INK ? 0.85 : 0.9);
+      P.stroke(x, pts, r, 5, width, col, alpha);
     }
     x.fillStyle = "#000";
     for (let qy = 0; qy < QR_SIZE; qy++) {
       for (let qx = 0; qx < QR_SIZE; qx++) if (qrDark(n, qx, qy)) x.fillRect(bx + quiet + qx * mod, by + quiet + qy * mod, mod + 0.5, mod + 0.5);
     }
-    // little stars in the corners of the frame
-    for (const [sx, sy] of [[bx - 28, by - 28], [bx + box + 28, by - 28], [bx - 28, by + box + 28], [bx + box + 28, by + box + 28]]) P.star(x, sx, sy, 20, r, color);
-    // the label: the treasure on both sides of a big number, and its name
-    const ly = by + box + 130;
-    for (const tx of [135, W - 135]) { x.save(); x.translate(tx, ly); x.scale(1.9, 1.9); TREASURES[n - 1].draw(x, r, 0); x.restore(); }
+    for (const [sx, sy] of [[bx - 29, by - 29], [bx + box + 29, by - 29], [bx - 29, by + box + 29], [bx + box + 29, by + box + 29]]) P.star(x, sx, sy, 22, r, color);
+    // the hero and the fairy guard the card, one on each side
+    const side = (W - box) / 4;
+    P.hero(x, side + 4, by + box * 0.5 + (n % 2) * 60, 200, n, { facing: 1 });
+    P.fairy(x, W - side - 4, by + box * 0.5 + ((n + 1) % 2) * 60, 190, n, { facing: -1 });
+    // the treasure, big, in the bottom corner
+    x.save(); x.translate(W - 120, by + box + 98); x.scale(1.7, 1.7); TREASURES[n - 1].draw(x, r, 0); x.restore();
+    // bottom: the number in a yellow crayon circle and the treasure's name
+    const ly = by + box + 100;
+    P.ellipse(x, 175, ly, 62, 58, r, 5, P.INK, "#ffd84d");
     x.fillStyle = P.INK;
-    x.textAlign = "center";
-    x.font = "bold 150px 'Patrick Hand', 'Comic Sans MS', cursive";
-    x.fillText(String(n), W / 2, ly + 40);
-    x.font = "46px 'Patrick Hand', 'Comic Sans MS', cursive";
-    x.fillText(TREASURES[n - 1].name, W / 2, H - 22);
+    x.textAlign = "center"; x.textBaseline = "middle";
+    x.font = "bold 104px 'Patrick Hand', 'Comic Sans MS', cursive";
+    x.fillText(String(n), 175, ly + 6);
+    x.textAlign = "left";
+    x.font = "bold 58px 'Patrick Hand', 'Comic Sans MS', cursive";
+    x.fillText("Treasure " + n, 268, ly - 26);
+    x.font = "44px 'Patrick Hand', 'Comic Sans MS', cursive";
+    x.globalAlpha = 0.8;
+    x.fillText(TREASURES[n - 1].name, 270, ly + 32);
+    x.restore();
+  }
+
+  function drawSheet() {
+    const c = document.createElement("canvas");
+    c.width = CARD_W * 2; c.height = CARD_H * 3;
+    const x = c.getContext("2d");
+    for (let n = 1; n <= MAX; n++) drawCard(n, x, ((n - 1) % 2) * CARD_W, Math.floor((n - 1) / 2) * CARD_H);
+    // dashed cut lines
+    x.save();
+    x.strokeStyle = "#555"; x.lineWidth = 3; x.setLineDash([18, 12]);
+    x.strokeRect(1.5, 1.5, c.width - 3, c.height - 3);
+    x.beginPath();
+    x.moveTo(CARD_W, 0); x.lineTo(CARD_W, c.height);
+    for (let row = 1; row < 3; row++) { x.moveTo(0, row * CARD_H); x.lineTo(c.width, row * CARD_H); }
+    x.stroke();
+    x.restore();
     return c;
   }
 
   function printCards() {
     const sheet = $("hunt-print");
     sheet.innerHTML = "";
-    for (let n = 1; n <= MAX; n++) {
-      const card = document.createElement("div");
-      card.className = "hunt-card";
-      const img = new Image();
-      img.alt = `Treasure card ${n}: ${TREASURES[n - 1].name}`;
-      img.src = drawCard(n).toDataURL("image/png");
-      card.appendChild(img);
-      sheet.appendChild(card);
-    }
-    // give the images a moment to decode before the print dialog snapshots the page
-    setTimeout(() => window.print(), 300);
+    const img = new Image();
+    img.alt = "Six treasure cards to cut out";
+    img.onload = () => setTimeout(() => window.print(), 100);
+    img.src = drawSheet().toDataURL("image/png");
+    sheet.appendChild(img);
   }
 
   // ------------------------------------------------------------ QR reading
@@ -560,5 +605,5 @@
     $("hunt-setup").onclick = openSetup;
   });
 
-  window.MazooleHunt = { open: openSetup, start, stop, drawCard, TREASURES, QR, qrDark, _state: H };
+  window.MazooleHunt = { open: openSetup, start, stop, drawCard, drawSheet, TREASURES, QR, qrDark, _state: H };
 })();

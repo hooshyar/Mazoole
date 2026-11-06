@@ -322,13 +322,12 @@ button.rec { background: #ffd6d6; animation: pulse 0.8s infinite alternate; }
 #hunt-done-row { display: flex; justify-content: center; gap: 6px; margin: 0 0 10px; }
 @media (prefers-reduced-motion: reduce) { #hunt-clue-pic canvas, #hunt-bag .slot.pop { animation: none; } }
 
-/* printed treasure cards: only the cards go on paper */
+/* printed treasure cards: one picture of all six, sized to fit any page */
 #hunt-print { display: none; }
 @media print {
-  @page { size: A4; margin: 10mm; }
+  @page { margin: 10mm; }
   html, body { height: auto; overflow: visible; background: #fff; display: block; }
   body > *:not(#hunt-print) { display: none !important; }
-  #hunt-print { display: grid !important; grid-template-columns: 90mm 90mm; gap: 6mm; justify-content: center; }
-  .hunt-card { width: 90mm; height: 86mm; border: 0.4mm dashed #999; break-inside: avoid; }
-  .hunt-card img { width: 100%; height: 100%; display: block; }
+  #hunt-print { display: block !important; }
+  #hunt-print img { display: block; width: 180mm; max-width: 100%; height: auto; margin: 0 auto; break-inside: avoid; page-break-inside: avoid; }
 }
