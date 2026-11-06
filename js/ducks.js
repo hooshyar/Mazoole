@@ -22,11 +22,32 @@
     { id: "perfect", name: "Perfect Ten", hint: "Catch every single duck in a game", prize: "gift" },
   ];
 
+  // Five levels, each with its own twist. Catching UNLOCK ducks opens the next one.
+  const LEVELS = [
+    { name: "Duck Pond", story: "Nice and easy. Catch the ducks!", speed: 0.85 },
+    { name: "Windy Day", story: "The wind makes the ducks zig and zag!", speed: 1, zigzag: true },
+    { name: "Duckling Dash", story: "Tiny yellow ducklings are small and quick: 150 points each!", speed: 1, ducklings: 0.6 },
+    { name: "Ghost Ducks", story: "Spooky ducks fade in and out. Shoot while you can see them!", speed: 0.95, ghost: true },
+    { name: "Mama Duck", story: "The giant Mama Duck needs 3 hits! Her ducklings come along too.", speed: 1, ducklings: 0.3, boss: true },
+  ];
+  const UNLOCK = 6;
+  const starsFor = (n) => (n >= DUCKS ? 3 : n >= 8 ? 2 : n >= UNLOCK ? 1 : 0);
+  const starText = (n) => "★".repeat(n) + "☆".repeat(3 - n);
+
   function load() {
-    try { const d = JSON.parse(localStorage.getItem(STORE)); if (d && typeof d === "object") return Object.assign(blank(), d); } catch (_) { /* first time */ }
+    try {
+      const d = JSON.parse(localStorage.getItem(STORE));
+      if (d && typeof d === "object") {
+        // records from before there were levels belong to level 1
+        if (!d.levels) d.levels = d.best ? { 0: { best: d.best, bestScore: d.bestScore } } : {};
+        return Object.assign(blank(), d);
+      }
+    } catch (_) { /* first time */ }
     return blank();
   }
-  function blank() { return { best: 0, bestScore: 0, games: 0, total: 0, secrets: {} }; }
+  function blank() { return { best: 0, bestScore: 0, games: 0, total: 0, secrets: {}, levels: {} }; }
+  const lv = (i) => rec.levels[i] || { best: 0, bestScore: 0 };
+  const unlocked = (i) => i === 0 || lv(i - 1).best >= UNLOCK;
   let rec = load();
   function save() { try { localStorage.setItem(STORE, JSON.stringify(rec)); } catch (_) { /* private mode */ } }
 
@@ -43,15 +64,19 @@
     c.translate(x, y);
     if (o.hit) c.rotate(Math.sin(t * 9) * 0.5 + Math.PI * 0.15 * f);
     c.scale(f, 1);
-    const body = o.gold ? "#ffd23f" : o.rainbow ? `hsl(${(t * 120 + (o.id || 0) * 60) % 360},85%,62%)` : "#b07a45";
-    const head = o.gold ? "#ffe680" : "#2f9e5a";
+    const body = o.gold ? "#ffd23f" : o.baby ? "#ffe066" : o.rainbow ? `hsl(${(t * 120 + (o.id || 0) * 60) % 360},85%,62%)` : o.mama ? "#c48a55" : "#b07a45";
+    const head = o.gold ? "#ffe680" : o.baby ? "#ffe066" : "#2f9e5a";
     // tail
     P.stroke(c, [[-s * 0.3, -s * 0.02], [-s * 0.46, -s * 0.12], [-s * 0.36, s * 0.06]], r, s * 0.02, Math.max(1.5, s * 0.02));
     // body
     P.ellipse(c, 0, 0, s * 0.33, s * 0.2, r, Math.max(1.5, s * 0.025), P.INK, body);
     // head and white neck ring
     P.ellipse(c, s * 0.27, -s * 0.2, s * 0.14, s * 0.13, r, Math.max(1.5, s * 0.025), P.INK, head);
-    P.stroke(c, [[s * 0.18, -s * 0.1], [s * 0.33, -s * 0.09]], r, s * 0.01, Math.max(2, s * 0.03), "#fff");
+    if (!o.baby) P.stroke(c, [[s * 0.18, -s * 0.1], [s * 0.33, -s * 0.09]], r, s * 0.01, Math.max(2, s * 0.03), "#fff");
+    if (o.mama) { // a pink bow on Mama Duck's head
+      P.ellipse(c, s * 0.2, -s * 0.33, s * 0.07, s * 0.045, r, 1.5, P.INK, "#ff8fc1");
+      P.ellipse(c, s * 0.32, -s * 0.34, s * 0.07, s * 0.045, r, 1.5, P.INK, "#ff8fc1");
+    }
     // beak
     c.beginPath(); c.moveTo(s * 0.38, -s * 0.22); c.lineTo(s * 0.55, -s * 0.18); c.lineTo(s * 0.38, -s * 0.13); c.closePath();
     c.fillStyle = "#ff9f1c"; c.fill();
@@ -68,7 +93,7 @@
     c.save();
     c.translate(-s * 0.02, -s * 0.04);
     c.rotate(-flap * 0.7);
-    P.ellipse(c, -s * 0.06, -s * 0.12, s * 0.2, s * 0.08, r, Math.max(1.5, s * 0.022), P.INK, o.gold ? "#fff3a0" : "#8a5a2b");
+    P.ellipse(c, -s * 0.06, -s * 0.12, s * 0.2, s * 0.08, r, Math.max(1.5, s * 0.022), P.INK, o.gold ? "#fff3a0" : o.baby ? "#ffd23f" : "#8a5a2b");
     c.restore();
     c.restore();
     if (o.gold && !o.hit) for (let i = 0; i < 3; i++) {
@@ -148,6 +173,17 @@
       grid.appendChild(li);
     }
     $("ducks-secret-count").textContent = `Secrets found: ${n} of ${SECRETS.length}`;
+    const list = $("ducks-levels");
+    list.innerHTML = "";
+    LEVELS.forEach((L, i) => {
+      const b = document.createElement("button"), r = lv(i), open = unlocked(i);
+      b.className = "card duck-level" + (open ? "" : " locked") + (L.boss ? " bonus" : "");
+      b.innerHTML = `<b>${i + 1}. ${L.name}</b>` +
+        (open ? `<span>${L.story}</span>` : `<span>🔒 Catch ${UNLOCK} ducks in “${LEVELS[i - 1].name}” to open.</span>`) +
+        `<div class="card-foot"><span class="stars">${starText(starsFor(r.best))}</span><span class="best">${r.best ? `Best ${r.best}/${DUCKS}` : ""}</span></div>`;
+      b.onclick = () => open ? play(i) : UI().toast(`Catch ${UNLOCK} ducks in “${LEVELS[i - 1].name}” first!`);
+      list.appendChild(b);
+    });
     const pic = $("ducks-pic");
     if (!pic.firstChild) pic.appendChild(icon((c, k) => { duck(c, k * 0.3, k * 0.55, k * 0.55, 0.1, { face: 1 }); duck(c, k * 0.72, k * 0.35, k * 0.45, 0.4, { face: -1, id: 2, gold: true }); }, 120));
     UI().show("ducks");
@@ -157,7 +193,13 @@
   const D = {
     on: false, ducks: [], wave: 0, shells: 0, hits: 0, score: 0, slots: [], center: 0, reload: 0, flash: 0,
     dizzy: 0, shook: false, found: [], owl: null, frog: null, between: 0, golden: 0, streak: 0, ids: 0, rainbow: false, lastShake: 0,
+    level: 0,
   };
+
+  function play(i) {
+    D.level = i;
+    window.MazooleHunt.start("ducks");
+  }
 
   function begin() {
     Object.assign(D, { on: false, ducks: [], wave: 0, shells: 0, hits: 0, score: 0, slots: [], reload: 0, flash: 0, dizzy: 0, shook: false, found: [], owl: null, frog: null, between: 0, streak: 0, ids: 0 });
@@ -228,14 +270,19 @@
       D.owl = { az: D.center + 20, el: 80, awake: false };
       D.frog = { az: D.center - 25, el: -78, awake: false };
     }
-    const speed = 1 + (D.wave - 1) * 0.12;
+    const L = LEVELS[D.level];
+    const speed = (1 + (D.wave - 1) * 0.12) * L.speed;
+    const last = D.wave * PER_WAVE >= DUCKS;
+    if (L.boss && last) { D.shells += 3; UI().toast("Here comes Mama Duck! 3 hits to catch her!"); }
     for (let i = 0; i < PER_WAVE; i++) {
       const gold = D.wave === D.golden && i === 0;
+      const kind = L.boss && last && i === 0 ? "mama" : !gold && L.ducklings && Math.random() < L.ducklings ? "baby" : "duck";
+      const sp = speed * (gold ? 1.5 : 1) * (kind === "baby" ? 1.3 : kind === "mama" ? 0.6 : 1);
       D.ducks.push({
-        id: ++D.ids, n: (D.wave - 1) * PER_WAVE + i, gold,
+        id: ++D.ids, n: (D.wave - 1) * PER_WAVE + i, gold, kind, hp: kind === "mama" ? 3 : 1,
         az: D.center + (i ? 25 : -25) + (Math.random() - 0.5) * 20, el: -18,
-        vaz: (Math.random() < 0.5 ? -1 : 1) * (12 + Math.random() * 8) * speed * (gold ? 1.5 : 1),
-        vel: (12 + Math.random() * 7) * speed, state: "fly", t: 0, face: 1,
+        vaz: (Math.random() < 0.5 ? -1 : 1) * (12 + Math.random() * 8) * sp,
+        vel: (12 + Math.random() * 7) * sp, state: "fly", t: 0, face: 1, seen: true, fade: 1,
       });
     }
     ar().sfx("flap");
@@ -260,7 +307,15 @@
         if (d.el < -15) d.vel = Math.abs(d.vel);
         if (Math.abs(d.az - D.center) > 60) d.vaz = -Math.sign(d.az - D.center) * Math.abs(d.vaz);
         if (Math.random() < dt * 0.35) d.vaz *= -1; // ducks change their minds
-        if (d.t > WAVE_TIME || (D.shells === 0 && D.reload === 0 && d.t > 1)) escape(d);
+        const L = LEVELS[D.level];
+        if (L.zigzag) { // gusts of wind: quick zigs and zags
+          d.zz = (d.zz == null ? 0.6 : d.zz) - dt;
+          if (d.zz <= 0) { d.zz = 0.45 + Math.random() * 0.5; d.vaz *= -1; if (Math.random() < 0.5) d.vel *= -1; }
+        }
+        d.fade = L.ghost ? 0.5 + 0.5 * Math.sin(d.t * 2.2 + d.id * 1.7) : 1;
+        d.seen = d.fade > 0.45; // ghost ducks can only be caught while you can see them
+        if (d.hurt > 0) d.hurt -= dt;
+        if (d.t > WAVE_TIME * (d.kind === "mama" ? 1.6 : 1) || (D.shells === 0 && D.reload === 0 && d.t > 1)) escape(d);
       } else if (d.state === "escape") {
         d.el += 70 * dt;
         d.az += d.vaz * dt;
@@ -284,7 +339,7 @@
     D.streak = 0;
     buildSlots();
     ar().sfx("flyaway");
-    UI().toast(d.gold ? "Oh no, the golden duck flew away!" : "Flew away! 🦆💨");
+    UI().toast(d.gold ? "Oh no, the golden duck flew away!" : d.kind === "mama" ? "Mama Duck flew home! 🦆💨" : "Flew away! 🦆💨");
   }
 
   // ------------------------------------------------------------ shooting
@@ -299,12 +354,29 @@
     if (navigator.vibrate) try { navigator.vibrate(30); } catch (_) { /* no buzz */ }
     const W = innerWidth, Hh = innerHeight, ring = Math.min(W, Hh) * 0.2;
     const inRing = (o) => o && o.vis && Math.hypot(o.sx - W / 2, o.sy - Hh / 2) < ring + o.size * 0.25;
-    const got = D.ducks.filter((d) => d.state === "fly" && inRing(d));
+    const aimed = D.ducks.filter((d) => d.state === "fly" && d.seen && inRing(d));
+    const got = [];
+    for (const d of aimed) {
+      if (d.hp > 1) { // Mama Duck shrugs off a hit or two
+        d.hp--;
+        d.hurt = 0.5;
+        D.score += 200;
+        d.pop = { text: "+200", t: 0 };
+        d.vaz *= -1.25; d.vel = Math.abs(d.vel) * 1.2;
+        ar().burst(d.sx, d.sy, d.size * 0.3, "#c48a55", 14);
+        ar().sfx("quack");
+        UI().toast(`Mama Duck: ${d.hp} more hit${d.hp > 1 ? "s" : ""}!`);
+        continue;
+      }
+      got.push(d);
+    }
     for (const d of got) {
       d.state = "hit";
       D.hits++;
       D.streak++;
-      const pts = (d.gold ? 500 : 100) * Math.min(3, D.streak);
+      const base = d.kind === "mama" ? 1000 : d.gold ? 500 : d.kind === "baby" ? 150 : 100;
+      const pts = base * Math.min(3, D.streak);
+      if (d.kind === "mama") { const PR = window.MazooleProgress; if (PR) UI().stickers(PR.bump("mamas")); UI().toast("You caught Mama Duck! 🎀"); }
       D.score += pts;
       D.slots[d.n] = d.gold ? "got gold" : "got";
       ar().burst(d.sx, d.sy, d.size * 0.4, d.gold ? "#ffd23f" : "#b07a45", 22);
@@ -324,7 +396,7 @@
       const o = D[key];
       if (o && !o.awake && inRing(o)) { o.awake = true; o.wake = 0; D.score += 300; secret(key); UI().toast(name + " +300"); }
     }
-    if (!got.length) D.streak = 0;
+    if (!aimed.length) D.streak = 0;
     updateBar();
   }
 
@@ -345,12 +417,16 @@
       secret("perfect");
       if (window.MazoolePowers) window.MazoolePowers.add("gift");
     }
-    const newBest = D.hits > rec.best, newScore = D.score > rec.bestScore;
+    const L = LEVELS[D.level], before = lv(D.level), wasOpen = unlocked(D.level + 1);
+    const newBest = D.hits > before.best, newScore = D.score > before.bestScore, played = before.best || before.bestScore;
+    rec.levels[D.level] = { best: Math.max(before.best, D.hits), bestScore: Math.max(before.bestScore, D.score) };
     rec.best = Math.max(rec.best, D.hits);
     rec.bestScore = Math.max(rec.bestScore, D.score);
     rec.games++;
     rec.total += D.hits;
     save();
+    const stars = starsFor(D.hits), next = D.level + 1 < LEVELS.length && unlocked(D.level + 1);
+    const opened = next && !wasOpen;
     window.MazooleHunt.stop();
     ar().sfx(D.hits >= 5 ? "win" : "lose");
     const PR = window.MazooleProgress;
@@ -359,6 +435,9 @@
       UI().stickers(PR.best("bestDucks", D.hits));
     }
     $("ducks-done-title").textContent = perfect ? "PERFECT! All 10 ducks!" : D.hits >= 7 ? "Super duck catcher!" : D.hits >= 4 ? "Nice catching!" : "The ducks were quick today!";
+    $("ducks-done-stars").innerHTML = `<small>${L.name}</small><br>${starText(stars)}`;
+    $("ducks-next").hidden = !next;
+    $("ducks-next").textContent = next ? `Next: ${LEVELS[D.level + 1].name} ▶` : "";
     const row = $("ducks-done-row");
     row.innerHTML = "";
     D.slots.forEach((s) => row.appendChild(icon((c, k) => { c.globalAlpha = s.startsWith("got") ? 1 : 0.22; duck(c, k / 2, k * 0.58, k * 0.9, 0, { face: 1, gold: s === "got gold" }); }, 30)));
@@ -366,9 +445,11 @@
       `<div><span>Ducks caught</span><b>${D.hits} / ${DUCKS}</b></div>`,
       `<div class="total"><span>Score</span><b>${D.score.toLocaleString()}</b></div>`,
     ];
-    if (newBest && rec.games > 1) lines.push(`<p class="new">New record: ${D.hits} ducks!</p>`);
-    else if (newScore && rec.games > 1) lines.push(`<p class="new">New best score!</p>`);
-    else lines.push(`<p>Record: ${rec.best} ducks · ${rec.bestScore.toLocaleString()} points</p>`);
+    if (opened) lines.push(`<p class="new">🔓 New level open: ${LEVELS[D.level + 1].name}!</p>`);
+    else if (D.hits < UNLOCK && D.level + 1 < LEVELS.length && !next) lines.push(`<p>Catch ${UNLOCK} ducks to open the next level!</p>`);
+    if (newBest && played) lines.push(`<p class="new">New record: ${D.hits} ducks!</p>`);
+    else if (newScore && played) lines.push(`<p class="new">New best score!</p>`);
+    else lines.push(`<p>Record: ${rec.levels[D.level].best} ducks · ${rec.levels[D.level].bestScore.toLocaleString()} points</p>`);
     for (const id of D.found) {
       const s = SECRETS.find((x) => x.id === id);
       lines.push(`<p class="secret">🤫 Secret: <b>${s.name}</b>${s.prize === "star" ? " (+⭐ power)" : s.prize === "gift" ? " (+🎁 power)" : ""}</p>`);
@@ -399,7 +480,7 @@
     let lock = false, nearest = null;
     for (const d of D.ducks) {
       const p = A.project(R, A.direction(d.az, d.el), W, Hh);
-      d.size = k * (d.gold ? 0.26 : 0.3);
+      d.size = k * (d.kind === "mama" ? 0.5 : d.kind === "baby" ? 0.2 : d.gold ? 0.26 : 0.3);
       if (d.sx != null) { const dx = p.x - d.sx; if (Math.abs(dx) > 0.5) d.face = dx > 0 ? 1 : -1; }
       d.sx = p.x; d.sy = p.y;
       d.pan = p.depth > 0 ? Math.max(-1, Math.min(1, p.dx * 2.5)) : (p.dx < 0 ? -1 : 1); // which ear hears it
@@ -409,8 +490,13 @@
         if (!nearest || off < nearest.off) nearest = { d, off, p };
       }
       if (!d.vis) continue;
-      duck(c, p.x, p.y, d.size, t, { face: d.face, gold: d.gold, rainbow: D.rainbow, hit: d.state === "hit", id: d.id });
-      if (d.state === "fly" && Math.hypot(p.x - W / 2, p.y - Hh / 2) < ring + d.size * 0.25) lock = true;
+      c.save();
+      if (d.state === "fly") c.globalAlpha = 0.1 + 0.9 * d.fade; // ghost ducks fade in and out
+      if (d.hurt > 0 && Math.floor(t * 20) % 2) c.globalAlpha *= 0.4;
+      duck(c, p.x, p.y, d.size, t, { face: d.face, gold: d.gold, rainbow: D.rainbow, hit: d.state === "hit", id: d.id, baby: d.kind === "baby", mama: d.kind === "mama" });
+      c.restore();
+      if (d.kind === "mama" && d.state === "fly") for (let h = 0; h < 3; h++) P.heart(c, p.x - d.size * 0.2 + h * d.size * 0.2, p.y - d.size * 0.55, d.size * 0.12, P.rng(h + 3), h < d.hp ? "#ff5c7a" : "#e0dcd3");
+      if (d.state === "fly" && d.seen && Math.hypot(p.x - W / 2, p.y - Hh / 2) < ring + d.size * 0.25) lock = true;
       if (D.dizzy > 0 && d.state === "fly") P.star(c, p.x, p.y - d.size * 0.45, d.size * 0.07, P.rng(d.id), "#9b5de5");
       if (d.pop && d.pop.t < 1) {
         d.pop.t += dt;
@@ -482,11 +568,11 @@
 
   window.addEventListener("DOMContentLoaded", () => {
     $("btn-ducks").onclick = open;
-    $("ducks-start").onclick = () => window.MazooleHunt.start("ducks");
-    $("ducks-again").onclick = () => window.MazooleHunt.start("ducks");
+    $("ducks-again").onclick = () => play(D.level);
+    $("ducks-next").onclick = () => play(D.level + 1);
     $("ducks-back").onclick = open;
     $("duck-shoot").addEventListener("pointerdown", (e) => { e.preventDefault(); shoot(); });
   });
 
-  window.MazooleDucks = { open, begin, go, stopped, shoot, frame, quake, SECRETS, duck, _state: D, get records() { return rec; } };
+  window.MazooleDucks = { open, play, begin, go, stopped, shoot, frame, quake, SECRETS, LEVELS, duck, _state: D, get records() { return rec; } };
 })();

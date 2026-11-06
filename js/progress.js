@@ -25,6 +25,7 @@
     { id: "ducks", name: "Duck Catcher", how: "Catch 10 ducks in Quack Hunt", test: (s) => s.ducks >= 10, icon: (c, k) => window.MazooleDucks && window.MazooleDucks.duck(c, k * 0.5, k * 0.55, k * 0.95, 0, { face: 1 }) },
     { id: "sharp", name: "Sharp Eye", how: "Catch all 10 ducks in one game", test: (s) => s.bestDucks >= 10, icon: (c, k) => window.MazooleDucks && window.MazooleDucks.duck(c, k * 0.5, k * 0.55, k * 0.95, 0, { face: -1, gold: true }) },
     { id: "secrets", name: "Secret Keeper", how: "Find 3 Quack Hunt secrets", test: (s) => s.duckSecrets >= 3, icon: (c, k) => { P.star(c, k * 0.5, k * 0.5, k * 0.4, P.rng(14), "#9b5de5"); P.star(c, k * 0.5, k * 0.5, k * 0.18, P.rng(15), "#fff3a0"); } },
+    { id: "mama", name: "Mama's Hug", how: "Catch the giant Mama Duck", test: (s) => s.mamas >= 1, icon: (c, k) => window.MazooleDucks && window.MazooleDucks.duck(c, k * 0.5, k * 0.58, k * 0.95, 0, { face: 1, mama: true }) },
     { id: "master", name: "Medal Master", how: "Collect 20 medals", test: (s) => s.medals >= 20, icon: (c, k) => { P.medal(c, k * 0.33, k * 0.62, k * 0.3, true); P.medal(c, k * 0.67, k * 0.62, k * 0.3, true); } },
   ];
 
@@ -40,7 +41,7 @@
 
   const bits = (m) => (m & 1) + ((m >> 1) & 1) + ((m >> 2) & 1);
   function totals() {
-    const t = Object.assign({ wins: 0, flights: 0, ports: 0, slides: 0, candy: 0, bestCombo: 0, ownPlays: 0, hunts: 0, biggestHunt: 0, ducks: 0, bestDucks: 0, duckSecrets: 0 }, data.totals);
+    const t = Object.assign({ wins: 0, flights: 0, ports: 0, slides: 0, candy: 0, bestCombo: 0, ownPlays: 0, hunts: 0, biggestHunt: 0, ducks: 0, bestDucks: 0, duckSecrets: 0, mamas: 0 }, data.totals);
     t.medals = Object.values(data.levels).reduce((n, l) => n + bits(l.medals || 0), 0);
     return t;
   }
